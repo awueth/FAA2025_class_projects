@@ -51,39 +51,60 @@ theorem ntt'_eq_ntt (hn0 : n ≠ 0) (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2
 
 end ntt'_correct
 
-def Vector.fntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+section vector
+
+def Vector.fntt_aux {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n))
+    (powers : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
   match n with
   | 0 => xs
   | n + 1 =>
-    let y_even := xs.restrictEven.fntt (ω ^ 2)
-    let y_odd  := xs.restrictOdd.fntt (ω ^ 2)
+    let powers' := powers.restrictEven
+    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.take (2 ^ n))
 
-    let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
+    let y_even := xs.restrictEven.fntt_aux (ω ^ 2) powers'
+    let y_odd  := xs.restrictOdd.fntt_aux (ω ^ 2) powers'
 
-    let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd powers
-    let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd powers
+    let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws
+    let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws
 
     Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)
+
+def Vector.fntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+  let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
+  xs.fntt_aux ω powers
 
 theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) (2 ^ n))
     (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω (fun i => xs.get i) = fun i => (xs.fntt ω).get i := by
   funext j
-  fun_induction Vector.fntt with
+  unfold Vector.fntt
+  let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
+  fun_induction xs.fntt_aux ω powers with
   | case1 => rfl
-  | case2 ω n powers xs y_even y_odd left right ih1 ih2 =>
-    simp only [ntt', Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.get_cast]
+  | case2 ω n xs powers powers' ws y_even y_odd left right ih1 ih2 =>
+    simp only [ntt', Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt_aux,
+      Vector.take_eq_extract, Vector.get_cast]
     rw [@Vector.get_eq_getElem, ok_even, ok_odd, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
     simp only [Fin.coe_cast]
     rw [@Vector.getElem_append]
     split_ifs with h
-    · simp only [Vector.zipWith3, Vector.getElem_ofFn, left, y_even, y_odd]
+    · simp only [Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
       congr
-      · exact Fin.natCast_eq_mk h
-      · simp only [Vector.get_map, powers]
-        congr 1
+      · simp [Vector.restrictEven]
+        ext k hk
+        simp
+        rw [← @pow_mul]
+        congr
         simp [Vector.finRange]
       · exact Fin.natCast_eq_mk h
-    · simp only [Vector.zipWith3, Vector.getElem_ofFn, right, y_even, y_odd]
+      · simp [Vector.map]
+      · simp [Vector.restrictEven]
+        ext k hk
+        simp
+        rw [← @pow_mul]
+        congr
+        simp [Vector.finRange]
+      · exact Fin.natCast_eq_mk h
+    · simp only [Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
       have hcast : @Nat.cast (Fin (2 ^ n)) (Fin.NatCast.instNatCast (2 ^ n)) ↑j
           = ⟨↑j - 2 ^ n, by omega⟩ := by
         rw [@Fin.eq_mk_iff_val_eq]
@@ -96,10 +117,23 @@ theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) 
           grind
       rw [sub_eq_add_neg, neg_mul_eq_neg_mul]
       congr
-      simp only [Vector.get_map, powers]
-      rw [@Vector.get_eq_getElem]
-      simp only [Vector.getElem_finRange]
-      rw [neg_eq_neg_one_mul]
-      nth_rw 1 [← Nat.sub_add_cancel (Nat.le_of_not_lt h), pow_add, mul_comm]
-      congr
-      exact hω.pow_eq_neg_one
+      · simp [Vector.restrictEven]
+        ext k hk
+        simp
+        rw [← @pow_mul]
+        congr
+        simp [Vector.finRange]
+      · simp only [Vector.get_eq_getElem]
+        rw [neg_eq_neg_one_mul]
+        nth_rw 1 [← Nat.sub_add_cancel (Nat.le_of_not_lt h), pow_add, mul_comm]
+        congr
+        · exact hω.pow_eq_neg_one
+        · simp [Vector.map]
+      · simp [Vector.restrictEven]
+        ext k hk
+        simp
+        rw [← @pow_mul]
+        congr
+        simp [Vector.finRange]
+
+end vector
