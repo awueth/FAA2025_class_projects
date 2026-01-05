@@ -60,7 +60,7 @@ theorem right_inv (hn0 : n ≠ 0) (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x
   · rw [ne_eq, ZMod.natCast_eq_zero_iff]
     exact hp
 
-theorem ntt_sum (ω : ZMod p) (x y : Fin n → ZMod p) : ntt ω (x + y) = ntt ω x + ntt ω y := by
+theorem ntt_add (ω : ZMod p) (x y : Fin n → ZMod p) : ntt ω (x + y) = ntt ω x + ntt ω y := by
   funext k
   simp [ntt, ← Finset.sum_add_distrib]
   group
@@ -70,14 +70,14 @@ theorem ntt_smul (ω : ZMod p) (x : Fin n → ZMod p) (a : ZMod p) : ntt ω (a �
   simp [ntt, Finset.mul_sum]
   group
 
--- TODO: remove h₀
-theorem ntt_shif (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrimitiveRoot ω n) (h₀ : n ≠ 0) :
+theorem ntt_shift {ω : ZMod p} (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrimitiveRoot ω n)  :
     ntt ω x (i - j) = ntt ω (fun k ↦ ω ^ (-(j : ℤ) * k) * x k) i := by
   unfold ntt
+  by_cases h0 : n = 0; subst h0; exact i.elim0
   refine Finset.sum_congr rfl (fun k _ ↦ ?_)
   simp_rw [mul_comm _ (x k), mul_assoc]
   congr
-  rw [← zpow_add₀ (h.ne_zero h₀)]
+  rw [← zpow_add₀ (h.ne_zero h0)]
   by_cases hij : j ≤ i
   · congr
     norm_cast
@@ -88,7 +88,7 @@ theorem ntt_shif (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrimitiveRoot ω n)
   · rw [@Fin.intCast_val_sub_eq_sub_add_ite]
     simp only [hij, ↓reduceIte]
     rw [mul_add]
-    rw [zpow_add₀ (h.ne_zero h₀), zpow_mul' ω k n, zpow_natCast ω n, h.pow_eq_one, one_zpow, mul_one]
+    rw [zpow_add₀ (h.ne_zero h0), zpow_mul' ω k n, zpow_natCast ω n, h.pow_eq_one, one_zpow, mul_one]
     congr
     ring
 
@@ -200,13 +200,31 @@ theorem intt_convolution (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : Is
         group
       _ = intt_aux ω x k * intt_aux ω y k := by rw [← Finset.sum_mul_sum]; rfl
 
-theorem ntt_mul (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : IsPrimitiveRoot ω n) :
-    ntt ω (x * y) = convolution (ntt ω x) (ntt ω y) := by
+theorem convolution_ntt (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : IsPrimitiveRoot ω n) :
+    convolution (ntt ω x) (ntt ω y) = n * ntt ω (x * y) := by
   funext k
-  symm
-  unfold convolution
-  conv_rhs => unfold ntt
-  rw [Fintype.sum_equiv (Equiv.subRightFin k)]
-  intro j
-  simp
-  sorry
+  by_cases h0 : n = 0; unfold ntt convolution; subst h0; simp_all
+  calc
+    convolution (ntt ω x) (ntt ω y) k = ∑ i, ntt ω x i * ntt ω y (k - i) := by rfl
+    _ = ∑ i, ntt ω x i * ntt ω (fun l ↦ ω ^ (-(i : ℤ) * l) * y l) k := by simp_rw [ntt_shift y k _ hω]
+    _ = ∑ i : Fin n, (∑ j, x j * ω ^ ((j : ℤ) * i)) * (∑ l : Fin n, ω ^ (-(i : ℤ) * l) * y l * ω ^ ((l : ℤ) * k)) := by rfl
+    _ = ∑ i : Fin n, ∑ j, ∑ l : Fin n, x j * ω ^ ((j : ℤ) * i) * (ω ^ (-(i : ℤ) * l) * y l * ω ^ ((l : ℤ) * k)) := by simp [Finset.sum_mul_sum]
+    _ = ∑ j, ∑ i : Fin n, ∑ l : Fin n, x j * ω ^ ((j : ℤ) * i) * (ω ^ (-(i : ℤ) * l) * y l * ω ^ ((l : ℤ) * k)) := by rw [Finset.sum_comm]
+    _ = ∑ j, ∑ l : Fin n, ∑ i : Fin n, x j * ω ^ ((j : ℤ) * i) * (ω ^ (-(i : ℤ) * l) * y l * ω ^ ((l : ℤ) * k)) := by conv_rhs => arg 2; intro; rw [Finset.sum_comm]
+    _ = ∑ j, ∑ l, x j * y l * ω ^ ((l : ℤ) * k) * ∑ i : Fin n, ω ^ ((j : ℤ) * i) * (ω ^ (-(i : ℤ) * l)) := by
+      refine Finset.sum_congr rfl (fun j _ ↦ ?_)
+      refine Finset.sum_congr rfl (fun l _ ↦ ?_)
+      rw [Finset.mul_sum]
+      refine Finset.sum_congr rfl (fun i _ ↦ ?_)
+      ring
+    _ = ∑ j, ∑ l, x j * y l * ω ^ ((l : ℤ) * k) * ∑ i : Fin n, ω ^ ((i : ℤ) * (j - l)) := by
+      refine Finset.sum_congr rfl (fun j _ ↦ ?_)
+      refine Finset.sum_congr rfl (fun l _ ↦ ?_)
+      congr 1
+      refine Finset.sum_congr rfl (fun i _ ↦ ?_)
+      rw [← zpow_add₀ (hω.ne_zero h0)]
+      congr
+      ring
+    _ = ∑ j, ∑ l, x j * y l * ω ^ ((l : ℤ) * k) * if (n : ℤ) ∣ j - l then n else 0 := by simp_rw [hω.sum_zpow_mul_eq]
+    _ = ∑ j, x j * y j * ω ^ ((j : ℤ) * k) * n := by simp [cast_divides_helper]
+    _ = n * ntt ω (x * y) k := by rw [← Finset.sum_mul, mul_comm]; rfl
