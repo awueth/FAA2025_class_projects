@@ -1,7 +1,7 @@
 import Mathlib.Algebra.Field.ZMod
 import Projects.Wuethrich.Aux
 import Projects.Wuethrich.PrimitiveRoots
-
+import Projects.Wuethrich.Convolution
 
 variable {n p : ℕ} [Fact p.Prime] (ω : ZMod p)
 
@@ -59,3 +59,77 @@ theorem right_inv (hn0 : n ≠ 0) (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x
   · exact congrFun (right_inv_aux ω hn0 h x) k
   · rw [ne_eq, ZMod.natCast_eq_zero_iff]
     exact hp
+
+theorem ntt_convolution.extracted_1 {n : ℕ} (j a : Fin n) : a - j + j = a := by
+  rcases n.eq_zero_or_pos with h | h
+  grind
+  simp [@Fin.add_def, @Fin.sub_def]
+  calc
+    ⟨(n - ↑j + ↑a + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑a) % n, Nat.mod_lt _ h⟩ := by group
+    _ = ⟨(n + ↑a) % n, Nat.mod_lt _ h⟩ := by aesop
+    _ = ⟨(n % n + ↑a % n) % n, Nat.mod_lt _ h⟩ := by simp
+    _ = ⟨↑a % n, Nat.mod_lt _ h⟩ := by simp
+    _ = a := by simp only [Fin.ext_iff];  rw [@Nat.mod_eq_iff]; right; exact ⟨a.2, by simp⟩
+
+theorem ntt_convolution.extracted_2 {n : ℕ} (j a : Fin n) : a + j - j = a := by
+  rcases n.eq_zero_or_pos with h | h
+  grind
+  simp [@Fin.add_def, @Fin.sub_def, ← add_assoc]
+  calc
+    ⟨(n - ↑j + ↑a + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑a) % n, Nat.mod_lt _ h⟩ := by group
+    _ = ⟨(n + ↑a) % n, Nat.mod_lt _ h⟩ := by aesop
+    _ = ⟨(n % n + ↑a % n) % n, Nat.mod_lt _ h⟩ := by simp
+    _ = ⟨↑a % n, Nat.mod_lt _ h⟩ := by simp
+    _ = a := by simp only [Fin.ext_iff];  rw [@Nat.mod_eq_iff]; right; exact ⟨a.2, by simp⟩
+
+@[simp]
+theorem val_mod_n {n : ℕ} (a : Fin n) : a.val % n = a.val := by
+  rw [@Nat.mod_eq_iff]
+  right
+  exact ⟨a.2, by simp⟩
+
+theorem sub_val_mod {n : ℕ} {a : Fin n} (h : 0 < a.val) : (n - a.val) % n = n - a.val := by
+  rw [@Nat.mod_eq_iff]
+  right
+  constructor
+  · grind
+  · use 0
+    simp
+
+theorem ntt_convolution (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : IsPrimitiveRoot ω n) :
+    ntt ω (convolution x y) = (ntt ω x) * (ntt ω y) := by
+  funext k
+  simp only [Pi.mul_apply]
+  calc
+    ntt ω (convolution x y) k = ∑ i, (∑ j, x j * y (i - j)) * ω ^ ((i : ℤ) * ↑↑k) := by rfl
+    _ = ∑ i, ∑ j, x j * y (i - j) * ω ^ ((i : ℤ) * ↑↑k) := by simp_rw [Finset.sum_mul]
+    _ = ∑ j, ∑ i, x j * y (i - j) * ω ^ ((i : ℤ) * ↑↑k) := Finset.sum_comm
+    _ = ∑ j, ∑ l, x j * y l * ω ^ ((j + l : ℤ) * ↑↑k) := by
+      refine Finset.sum_congr rfl (fun j _ ↦ ?_)
+      rw [Finset.sum_bij'
+          (g := fun l ↦ x j * y l * ω ^ ((j + l : ℤ) * ↑↑k))
+          (fun l _ ↦ l - j)
+          (fun l _ ↦ l + j)]
+      · simp
+      · simp
+      · simp [ntt_convolution.extracted_1]
+      · simp [ntt_convolution.extracted_2]
+      · intro i _
+        congr 1
+        rw [@Fin.coe_sub, @Nat.add_mod_eq_sub]
+        simp only [val_mod_n]
+        split_ifs with h
+        · rcases j.val.eq_zero_or_pos with h | h
+          · simp_all
+          · simp only [sub_val_mod h, tsub_zero, Nat.cast_add, Fin.is_le', Nat.cast_sub]
+            ring_nf
+            norm_cast
+            rw [pow_add, pow_mul' ω k.val n, hω.pow_eq_one]
+            simp
+        · have : j.val > 0 := by
+            contrapose h
+            simp_all
+          congr
+          grind [sub_val_mod]
+    _ = ∑ j, ∑ l, (x j * ω ^ ((j : ℤ) * k)) * (y l * ω ^ ((l : ℤ) * k)) := by simp [add_mul]; norm_cast; simp [pow_add]; grind
+    _ = ntt ω x k * ntt ω y k := by rw [← Finset.sum_mul_sum]; rfl
