@@ -96,6 +96,12 @@ theorem sub_val_mod {n : ℕ} {a : Fin n} (h : 0 < a.val) : (n - a.val) % n = n 
   · use 0
     simp
 
+def myEquiv {n : ℕ} (j : Fin n) : Fin n ≃ Fin n where
+  toFun l := l - j
+  invFun l := l + j
+  left_inv i := by simp [ntt_convolution.extracted_1]
+  right_inv i := by simp [ntt_convolution.extracted_2]
+
 theorem ntt_convolution (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : IsPrimitiveRoot ω n) :
     ntt ω (convolution x y) = (ntt ω x) * (ntt ω y) := by
   funext k
@@ -106,15 +112,9 @@ theorem ntt_convolution (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : IsP
     _ = ∑ j, ∑ i, x j * y (i - j) * ω ^ ((i : ℤ) * ↑↑k) := Finset.sum_comm
     _ = ∑ j, ∑ l, x j * y l * ω ^ ((j + l : ℤ) * ↑↑k) := by
       refine Finset.sum_congr rfl (fun j _ ↦ ?_)
-      rw [Finset.sum_bij'
-          (g := fun l ↦ x j * y l * ω ^ ((j + l : ℤ) * ↑↑k))
-          (fun l _ ↦ l - j)
-          (fun l _ ↦ l + j)]
-      · simp
-      · simp
-      · simp [ntt_convolution.extracted_1]
-      · simp [ntt_convolution.extracted_2]
-      · intro i _
+      rw [Fintype.sum_equiv (myEquiv j)]
+      · intro i
+        simp only [myEquiv, Equiv.coe_fn_mk]
         congr 1
         rw [@Fin.coe_sub, @Nat.add_mod_eq_sub]
         simp only [val_mod_n]
@@ -126,10 +126,8 @@ theorem ntt_convolution (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : IsP
             norm_cast
             rw [pow_add, pow_mul' ω k.val n, hω.pow_eq_one]
             simp
-        · have : j.val > 0 := by
-            contrapose h
-            simp_all
-          congr
+        · congr
+          have : j.val > 0 := by contrapose h; simp_all
           grind [sub_val_mod]
     _ = ∑ j, ∑ l, (x j * ω ^ ((j : ℤ) * k)) * (y l * ω ^ ((l : ℤ) * k)) := by simp [add_mul]; norm_cast; simp [pow_add]; grind
     _ = ntt ω x k * ntt ω y k := by rw [← Finset.sum_mul_sum]; rfl
