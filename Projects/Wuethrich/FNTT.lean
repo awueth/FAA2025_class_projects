@@ -147,6 +147,9 @@ lemma getPowers_restrictEven {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers �
 def Vector.fntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
   xs.fntt_aux ω (getPowers ω n)
 
+def Vector.ifntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+  (2 ^ n : ZMod p)⁻¹ • xs.fntt ω⁻¹
+
 theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) (2 ^ n))
     (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω (fun i => xs.get i) = fun i => (xs.fntt ω).get i := by
   funext j
@@ -188,5 +191,4 @@ theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) 
         congr
         exact hω.pow_eq_neg_one
       · exact getPowers_restrictEven
-
 end vector
