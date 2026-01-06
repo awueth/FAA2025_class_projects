@@ -69,53 +69,83 @@ def Vector.fntt_aux {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n))
 
     Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)
 
+def getPowers_loop {p : ℕ} (ω : ZMod p) (size : ℕ) (arr : Array (ZMod p)) (val : ZMod p) : Array (ZMod p) :=
+  if arr.size < size then
+      getPowers_loop ω size (arr.push val) (ω * val)
+  else
+    arr
+termination_by size - arr.size
+
+lemma getPowers_loop_len {p size : ℕ} (ω : ZMod p) (arr : Array (ZMod p)) (val : ZMod p)
+    (h_sz : arr.size ≤ size) :
+    (getPowers_loop ω size arr val).size = size := by
+  fun_induction getPowers_loop ω size arr val with
+  | case1 arr val h ih =>
+    apply ih
+    simp
+    apply Nat.succ_le_of_lt
+    omega
+  | case2 arr val h => omega
+
+
+def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
+  let initArray := Array.emptyWithCapacity (2 ^ n)
+  ⟨getPowers_loop ω (2 ^ n) initArray 1, getPowers_loop_len ω initArray 1 (by simp [initArray])⟩
+
 /-
-def getPowers' (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
-  let size := 2 ^ n
-  let initArray := Array.emptyWithCapacity size
-
-  let rec loop (arr : Array (ZMod p)) (val : ZMod p) : Array (ZMod p) :=
-    if h : arr.size < size then
-      let newArr := arr.push val
-      loop newArr (ω * val)
-    else
-      arr
-    termination_by size - arr.size
-
-  ⟨loop initArray 1, sorry⟩
--/
-
 def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
   let emptyList := List.replicate (2 ^ n - 1) ()
   let powerList : List (ZMod p) := emptyList.scanl (fun acc _ ↦ acc * ω) 1
 
   ⟨powerList.toArray, by simp only [List.size_toArray, List.length_scanl, List.length_replicate,
     powerList, emptyList]; exact Nat.sub_add_cancel Nat.one_le_two_pow⟩
-
-/-
-instance : Fact (Nat.Prime 23) := by
-  rw [@fact_iff]
-  exact Nat.properDivisors_eq_singleton_one_iff_prime.mp rfl
-
-#eval! getPowers' (2 : ZMod 23) 2
-#eval getPowers (2 : ZMod 23) 2
 -/
 
-/-
-example {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers ω (n + 1)).restrictEven := by
-  simp [Vector.restrictEven]
+theorem getPowers_getElem {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers ω n)[k] = ω ^ k := by
+  unfold getPowers
+  simp only [Vector.getElem_mk]
+
+  let arr := Array.emptyWithCapacity (α := ZMod p) (2 ^ n)
+  let val := (1 : ZMod p)
+
+  suffices ∀ arr val,
+    (h_sz : arr.size ≤ 2 ^ n) →                 -- The array doesn't exceed capacity
+    (∀ i (hi : i < arr.size), arr[i] = ω ^ i) → -- Existing elements are correct
+    val = ω ^ arr.size →                        -- Current val is the next power
+    (getPowers_loop  ω (2 ^ n) arr val)[k]'(by rw [getPowers_loop_len ω arr val h_sz]; exact hk) = ω ^ k
+    from this arr val (by simp [arr]) (by simp_all [arr]) (by simp [arr]; rfl)
+
+  intro arr val h_sz h_arr_correct h_val_correct
+
+  fun_induction getPowers_loop  ω (2 ^ n) arr val with
+  | case1 arr val h ih =>
+    unfold getPowers_loop
+    simp [h]
+    apply ih
+    · simp
+      aesop
+    · intro i hi
+      rw [Array.getElem_push]
+      split_ifs with hi
+      · exact h_arr_correct i hi
+      · rw [h_val_correct]
+        congr
+        grind
+    · simp [h_val_correct, pow_add]
+      ring
+  | case2 arr val h =>
+    unfold getPowers_loop
+    simp [h]
+    apply h_arr_correct
+
+lemma getPowers_restrictEven {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers ω (n + 1)).restrictEven := by
+  unfold Vector.restrictEven
   ext k hk
-  simp [getPowers]
-  fun_induction List.foldl (fun acc x ↦ acc * ω) 1 (List.replicate (min (2 * k) (2 ^ (n + 1) - 1)) ()) with
-  | case1 => sorry
-  | case2 => sorry
--/
-
-
+  simp only [getPowers_getElem, Vector.getElem_ofFn, Vector.get_eq_getElem]
+  ring
 
 def Vector.fntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
-  let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val) -- Runs in O(2 ^ n), replace iwth getPowers
-  xs.fntt_aux ω powers
+  xs.fntt_aux ω (getPowers ω n)
 
 theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) (2 ^ n))
     (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω (fun i => xs.get i) = fun i => (xs.fntt ω).get i := by
@@ -133,20 +163,10 @@ theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) 
     split_ifs with h
     · simp only [Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
       congr
-      · simp [Vector.restrictEven]
-        ext k hk
-        simp
-        rw [← @pow_mul]
-        congr
-        simp [Vector.finRange]
+      · exact getPowers_restrictEven
       · exact Fin.natCast_eq_mk h
-      · simp [Vector.map]
-      · simp [Vector.restrictEven]
-        ext k hk
-        simp
-        rw [← @pow_mul]
-        congr
-        simp [Vector.finRange]
+      · simp [Vector.extract, getPowers_getElem]
+      · exact getPowers_restrictEven
       · exact Fin.natCast_eq_mk h
     · simp only [Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
       have hcast : @Nat.cast (Fin (2 ^ n)) (Fin.NatCast.instNatCast (2 ^ n)) ↑j
@@ -161,23 +181,12 @@ theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) 
           grind
       rw [sub_eq_add_neg, neg_mul_eq_neg_mul]
       congr
-      · simp [Vector.restrictEven]
-        ext k hk
-        simp
-        rw [← @pow_mul]
-        congr
-        simp [Vector.finRange]
-      · simp only [Vector.get_eq_getElem]
+      · exact getPowers_restrictEven
+      · simp [Vector.extract, getPowers_getElem]
         rw [neg_eq_neg_one_mul]
         nth_rw 1 [← Nat.sub_add_cancel (Nat.le_of_not_lt h), pow_add, mul_comm]
         congr
-        · exact hω.pow_eq_neg_one
-        · simp [Vector.map]
-      · simp [Vector.restrictEven]
-        ext k hk
-        simp
-        rw [← @pow_mul]
-        congr
-        simp [Vector.finRange]
+        exact hω.pow_eq_neg_one
+      · exact getPowers_restrictEven
 
 end vector
