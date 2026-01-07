@@ -23,8 +23,18 @@ theorem intt_as_ntt' : intt (n := n) ω = (n : ZMod p)⁻¹ • ntt (n := n) ω�
   simp_all only [zpow_neg, inv_zpow']
   rfl
 
+theorem ntt_add (ω : ZMod p) (x y : Fin n → ZMod p) : ntt ω (x + y) = ntt ω x + ntt ω y := by
+  funext k
+  simp [ntt, ← Finset.sum_add_distrib]
+  group
+
+theorem ntt_smul (ω : ZMod p) (x : Fin n → ZMod p) (a : ZMod p) : ntt ω (a • x) = a • ntt ω x := by
+  funext k
+  simp [ntt, Finset.mul_sum]
+  group
+
 lemma left_inv_aux (hn0 : n ≠ 0) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
-    intt_aux ω (ntt ω x) = n * x := by
+    intt_aux ω (ntt ω x) = n • x := by
   unfold ntt intt_aux
   funext k
   simp_rw [Finset.sum_mul, mul_assoc,
@@ -35,10 +45,10 @@ lemma left_inv_aux (hn0 : n ≠ 0) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMo
   simp [cast_divides_helper, mul_comm]
 
 lemma right_inv_aux (hn0 : n ≠ 0) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
-    ntt ω (intt_aux ω x) = n * x := by
+    ntt ω (intt_aux ω x) = n • x := by
   unfold ntt intt_aux
   funext k
-  simp only [Pi.mul_apply, Pi.natCast_apply]
+  simp only [Pi.smul_apply, nsmul_eq_mul]
   calc
     ∑ i : Fin n, (∑ j, x j * ω ^ (-((j : ℤ) * i))) * ω ^ ((i : ℤ) * k) =
       ∑ i : Fin n, ∑ j, x j * ω ^ (-((j : ℤ) * i) + i * k) := by
@@ -52,34 +62,19 @@ lemma right_inv_aux (hn0 : n ≠ 0) (h : IsPrimitiveRoot ω n) (x : Fin n → ZM
 
 theorem left_inv (hn0 : n ≠ 0) (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
     intt ω (ntt ω x) = x := by
-  unfold intt
-  funext k
-  simp only [Pi.smul_apply, smul_eq_mul]
-  rw [inv_mul_eq_iff_eq_mul₀]
-  · exact congrFun (left_inv_aux ω hn0 h x) k
+  rw [intt, inv_smul_eq_iff₀]
+  · simp_all [left_inv_aux ω hn0 h x]
+    rfl
   · rw [ne_eq, ZMod.natCast_eq_zero_iff]
     exact hp
 
 theorem right_inv (hn0 : n ≠ 0) (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
     ntt ω (intt ω x) = x := by
-  unfold ntt intt
-  funext k
-  simp only [Pi.smul_apply, smul_eq_mul]
-  simp_rw [mul_assoc, ← Finset.mul_sum]
-  rw [inv_mul_eq_iff_eq_mul₀]
-  · exact congrFun (right_inv_aux ω hn0 h x) k
+  rw [intt, ntt_smul, right_inv_aux ω hn0 h x, inv_smul_eq_iff₀]
+  · simp_all
+    rfl
   · rw [ne_eq, ZMod.natCast_eq_zero_iff]
     exact hp
-
-theorem ntt_add (ω : ZMod p) (x y : Fin n → ZMod p) : ntt ω (x + y) = ntt ω x + ntt ω y := by
-  funext k
-  simp [ntt, ← Finset.sum_add_distrib]
-  group
-
-theorem ntt_smul (ω : ZMod p) (x : Fin n → ZMod p) (a : ZMod p) : ntt ω (a • x) = a • ntt ω x := by
-  funext k
-  simp [ntt, Finset.mul_sum]
-  group
 
 theorem ntt_shift {ω : ZMod p} (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrimitiveRoot ω n)  :
     ntt ω x (i - j) = ntt ω (fun k ↦ ω ^ (-(j : ℤ) * k) * x k) i := by
@@ -102,48 +97,6 @@ theorem ntt_shift {ω : ZMod p} (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrim
     rw [zpow_add₀ (h.ne_zero h0), zpow_mul' ω k n, zpow_natCast ω n, h.pow_eq_one, one_zpow, mul_one]
     congr
     ring
-
-
-@[simp]
-theorem val_mod_n {n : ℕ} (a : Fin n) : a.val % n = a.val := by
-  rw [@Nat.mod_eq_iff]
-  right
-  exact ⟨a.2, by simp⟩
-
-theorem sub_val_mod {n : ℕ} {a : Fin n} (h : 0 < a.val) : (n - a.val) % n = n - a.val := by
-  rw [@Nat.mod_eq_iff]
-  right
-  constructor
-  · grind
-  · use 0
-    simp
-
-def Equiv.subRightFin {n : ℕ} (j : Fin n) : Fin n ≃ Fin n where
-  toFun l := l - j
-  invFun l := l + j
-  left_inv i := by
-    rcases n.eq_zero_or_pos with h | h
-    · grind
-    · simp only [Fin.sub_def, Fin.add_def, Nat.mod_add_mod]
-      calc
-        ⟨(n - ↑j + ↑i + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑i) % n, Nat.mod_lt _ h⟩ := by group
-        _ = ⟨(n + ↑i) % n, Nat.mod_lt _ h⟩ := by simp
-        _ = ⟨(n % n + ↑i % n) % n, Nat.mod_lt _ h⟩ := by simp
-        _ = ⟨↑i % n, Nat.mod_lt _ h⟩ := by simp
-        _ = i := by simp only [Fin.ext_iff, Nat.mod_eq_iff]; exact Or.inr ⟨i.2, by simp⟩
-  right_inv i := by
-    rcases n.eq_zero_or_pos with h | h
-    · grind
-    · simp only [Fin.add_def, Fin.sub_def, Nat.add_mod_mod, ← add_assoc]
-      calc
-        ⟨(n - ↑j + ↑i + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑i) % n, Nat.mod_lt _ h⟩ := by group
-        _ = ⟨(n + ↑i) % n, Nat.mod_lt _ h⟩ := by simp
-        _ = ⟨(n % n + ↑i % n) % n, Nat.mod_lt _ h⟩ := by simp
-        _ = ⟨↑i % n, Nat.mod_lt _ h⟩ := by simp
-        _ = i := by simp only [Fin.ext_iff, Nat.mod_eq_iff]; exact Or.inr ⟨i.2, by simp⟩
-
-@[simp]
-def Equiv.subRightFin_apply {n : ℕ} (i j : Fin n) : Equiv.subRightFin i j = j - i := by rfl
 
 variable {ω : ZMod p}
 
@@ -230,6 +183,5 @@ theorem convolution_intt (x : Fin n → ZMod p) (y : Fin n → ZMod p) (hω : Is
   funext i
   simp only [nsmul_eq_mul, Pi.smul_apply, Pi.mul_apply, Pi.natCast_apply, smul_eq_mul]
   rw [inv_mul_eq_iff_eq_mul₀]
-  rw [← @ZMod.val_ne_zero]
-  rw [ZMod.val_natCast]
+  rw [← @ZMod.val_ne_zero, ZMod.val_natCast]
   exact hp

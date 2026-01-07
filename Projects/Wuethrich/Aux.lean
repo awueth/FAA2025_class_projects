@@ -1,9 +1,8 @@
 import Batteries.Data.Vector.Lemmas
-import Mathlib.Algebra.GroupWithZero.Divisibility
 import Mathlib.Algebra.Order.Ring.Nat
 import Mathlib.Algebra.Ring.Divisibility.Basic
-import Mathlib.Algebra.Ring.Int.Defs
 import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Tactic.Ring.RingNF
 
 section Fin
 
@@ -89,6 +88,47 @@ lemma sum_even_odd_split {n : ℕ} (f : Fin (2 ^ (n + 1)) → M) :
     rfl
   · intro i
     simp only [Equiv.toFun_as_coe, Equiv.apply_symm_apply]
+
+def Equiv.subRightFin {n : ℕ} (j : Fin n) : Fin n ≃ Fin n where
+  toFun l := l - j
+  invFun l := l + j
+  left_inv i := by
+    rcases n.eq_zero_or_pos with h | h
+    · grind
+    · simp only [Fin.sub_def, Fin.add_def, Nat.mod_add_mod]
+      calc
+        ⟨(n - ↑j + ↑i + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑i) % n, Nat.mod_lt _ h⟩ := by ring_nf
+        _ = ⟨(n + ↑i) % n, Nat.mod_lt _ h⟩ := by simp
+        _ = ⟨(n % n + ↑i % n) % n, Nat.mod_lt _ h⟩ := by simp
+        _ = ⟨↑i % n, Nat.mod_lt _ h⟩ := by simp
+        _ = i := by simp only [Fin.ext_iff, Nat.mod_eq_iff]; exact Or.inr ⟨i.2, by simp⟩
+  right_inv i := by
+    rcases n.eq_zero_or_pos with h | h
+    · grind
+    · simp only [Fin.add_def, Fin.sub_def, Nat.add_mod_mod, ← add_assoc]
+      calc
+        ⟨(n - ↑j + ↑i + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑i) % n, Nat.mod_lt _ h⟩ := by ring_nf
+        _ = ⟨(n + ↑i) % n, Nat.mod_lt _ h⟩ := by simp
+        _ = ⟨(n % n + ↑i % n) % n, Nat.mod_lt _ h⟩ := by simp
+        _ = ⟨↑i % n, Nat.mod_lt _ h⟩ := by simp
+        _ = i := by simp only [Fin.ext_iff, Nat.mod_eq_iff]; exact Or.inr ⟨i.2, by simp⟩
+
+@[simp]
+def Equiv.subRightFin_apply {n : ℕ} (i j : Fin n) : Equiv.subRightFin i j = j - i := by rfl
+
+@[simp]
+theorem val_mod_n {n : ℕ} (a : Fin n) : a.val % n = a.val := by
+  rw [@Nat.mod_eq_iff]
+  right
+  exact ⟨a.2, by simp⟩
+
+theorem sub_val_mod {n : ℕ} {a : Fin n} (h : 0 < a.val) : (n - a.val) % n = n - a.val := by
+  rw [@Nat.mod_eq_iff]
+  right
+  constructor
+  · grind
+  · use 0
+    simp
 
 end Fin
 

@@ -1,8 +1,5 @@
-import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Algebra.Ring.Basic
-import Mathlib.Algebra.Group.Action.Defs
 import Mathlib.Algebra.BigOperators.Ring.Finset
-import Mathlib.Tactic.Group
+import Mathlib.Algebra.Group.Action.Defs
 
 section
 
