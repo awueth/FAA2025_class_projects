@@ -7,14 +7,16 @@ variable {n : ℕ} {R : Type} [Ring R] (x y : Fin n → R)
 
 def convolution : Fin n → R := fun k ↦ ∑ j, x j * y (k - j)
 
-theorem convolution_smul_left (a : R) : convolution (a • x) y = a • convolution x y := by
+infixl:70 " ⋆ " => convolution
+
+theorem convolution_smul_left (a : R) :  (a • x) ⋆ y = a • (x ⋆ y) := by
   unfold convolution
   funext i
   simp only [Pi.smul_apply, smul_eq_mul, Finset.mul_sum, mul_assoc]
 
 variable {n : ℕ} {R : Type} [CommRing R] (x y : Fin n → R)
 
-theorem convolution_smul_right (a : R) : convolution x (a • y) = a • convolution x y := by
+theorem convolution_smul_right (a : R) : x ⋆ (a • y) = a • (x ⋆ y) := by
   unfold convolution
   funext i
   simp only [Pi.smul_apply, smul_eq_mul, Finset.mul_sum]

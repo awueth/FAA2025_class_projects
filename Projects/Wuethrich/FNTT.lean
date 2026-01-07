@@ -2,17 +2,17 @@ import Projects.Wuethrich.NTT
 
 variable {n p : ℕ} [Fact p.Prime]
 
-def ntt' {n : ℕ} (ω : ZMod p) (x : Fin (2 ^ n) → ZMod p) (k : Fin (2 ^ n)) : ZMod p :=
+def ntt_rec {n : ℕ} (ω : ZMod p) (x : Fin (2 ^ n) → ZMod p) (k : Fin (2 ^ n)) : ZMod p :=
   match n with
   | 0 => x k
   | n + 1 =>
     let k' := Fin.ofNat (2 ^ n) k
-    let y_even := ntt' (ω ^ 2) (restrictEven x) k'
-    let y_odd  := ntt' (ω ^ 2) (restrictOdd x)  k'
+    let y_even := ntt_rec (ω ^ 2) (restrictEven x) k'
+    let y_odd  := ntt_rec (ω ^ 2) (restrictOdd x)  k'
 
     y_even + (ω ^ (k : ℕ)) * y_odd
 
-section ntt'_correct
+section ntt_rec_correct
 
 variable {ω : ZMod p} (x : Fin (2 ^ (n + 1)) → ZMod p)
 
@@ -35,20 +35,20 @@ lemma ntt_split (h : IsPrimitiveRoot ω (2 ^ (n + 1))) (k : Fin (2 ^ (n + 1))) :
     simp [mul_right_comm, pow_mul, ← h.pow_two_fin_of_nat]
     ring
 
-theorem ntt'_eq_ntt (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMod p) :
-    ntt' ω x = ntt ω x := by
+theorem ntt_rec_eq_ntt (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMod p) :
+    ntt_rec ω x = ntt ω x := by
   funext k
-  fun_induction ntt' ω x k with
+  fun_induction ntt_rec ω x k with
   | case1 ω x i => fin_cases i; simp [ntt]
   | case2 ω n x k k' y_even y_odd ih_even ih_odd =>
     cases n with
     | zero =>
-      simp [y_even, y_odd, ntt', restrictEven, restrictOdd, Fin.double, Fin.doubleSucc, ntt, mul_comm]
+      simp [y_even, y_odd, ntt_rec, restrictEven, restrictOdd, Fin.double, Fin.doubleSucc, ntt, mul_comm]
     | succ n =>
       rw [ntt_split x h, ← ih_even, ← ih_odd]
       all_goals simpa [pow_succ] using h.pow_two_of_even_order (by grind)
 
-end ntt'_correct
+end ntt_rec_correct
 
 section vector
 
@@ -142,14 +142,14 @@ def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
 
 variable {ω : ZMod p}
 
-theorem vector_fntt_eq_tuple_ntt' (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω xs.get = (xs.fntt ω).get  := by
+theorem vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.get = (xs.fntt ω).get  := by
   funext j
   unfold Vector.fntt
   let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
   fun_induction xs.fntt_aux ω powers with
   | case1 => rfl
   | case2 ω n xs powers powers' ws y_even y_odd left right ih1 ih2 =>
-    simp_rw [ntt', Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt_aux,
+    simp_rw [ntt_rec, Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt_aux,
       Vector.take_eq_extract, Vector.get_cast]
     rw [@Vector.get_eq_getElem, restrictEven_of_vector, restrictOdd_of_vector, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
     simp_rw [Fin.coe_cast, @Vector.getElem_append, Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
@@ -168,7 +168,16 @@ theorem vector_fntt_eq_tuple_ntt' (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω x
         apply Nat.mod_eq_of_lt (by omega)
 
 theorem Vector.fntt_correct (hω : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get := by
-  rw [← ntt'_eq_ntt hω]
-  exact (vector_fntt_eq_tuple_ntt' xs hω).symm
+  rw [← ntt_rec_eq_ntt hω]
+  exact (vector_fntt_eq_tuple_ntt_rec xs hω).symm
+
+theorem Vector.ifntt_correct (hω : IsPrimitiveRoot ω (2 ^ n)) : (xs.ifntt ω).get = intt ω xs.get := by
+  rw [intt_as_ntt, Vector.ifntt]
+  funext i
+  simp only [get, Fin.coe_cast, getElem_toArray, getElem_smul, smul_eq_mul, Nat.cast_pow,
+    Nat.cast_ofNat]
+  congr
+  rw [← xs.fntt_correct hω.inv]
+  rfl
 
 end vector
