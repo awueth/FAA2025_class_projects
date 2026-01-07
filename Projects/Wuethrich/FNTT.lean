@@ -35,25 +35,26 @@ lemma ntt_split (h : IsPrimitiveRoot ω (2 ^ (n + 1))) (k : Fin (2 ^ (n + 1))) :
     simp [mul_right_comm, pow_mul, ← h.pow_two_fin_of_nat]
     ring
 
-theorem ntt'_eq_ntt (hn0 : n ≠ 0) (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMod p) :
+theorem ntt'_eq_ntt (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMod p) :
     ntt' ω x = ntt ω x := by
   funext k
   fun_induction ntt' ω x k with
-  | case1 => simp_all
+  | case1 ω x i => fin_cases i; simp [ntt]
   | case2 ω n x k k' y_even y_odd ih_even ih_odd =>
     cases n with
     | zero =>
       simp [y_even, y_odd, ntt', restrictEven, restrictOdd, Fin.double, Fin.doubleSucc, ntt, mul_comm]
     | succ n =>
-      rw [ntt_split x h, ← ih_even (Ne.symm (Nat.zero_ne_add_one n)),
-       ← ih_odd (Ne.symm (Nat.zero_ne_add_one n))]
+      rw [ntt_split x h, ← ih_even, ← ih_odd]
       all_goals simpa [pow_succ] using h.pow_two_of_even_order (by grind)
 
 end ntt'_correct
 
 section vector
 
-def Vector.fntt_aux {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n))
+variable {n : ℕ} (xs : Vector (ZMod p) (2 ^ n))
+
+def Vector.fntt_aux {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
     (powers : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
   match n with
   | 0 => xs
@@ -82,24 +83,13 @@ lemma getPowers_loop_len {p size : ℕ} (ω : ZMod p) (arr : Array (ZMod p)) (va
   fun_induction getPowers_loop ω size arr val with
   | case1 arr val h ih =>
     apply ih
-    simp
-    apply Nat.succ_le_of_lt
-    omega
-  | case2 arr val h => omega
-
+    rw [Array.size_push]
+    exact Nat.succ_le_of_lt h
+  | case2 arr val h => exact (eq_of_ge_of_le h_sz (Nat.le_of_not_lt h)).symm
 
 def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
   let initArray := Array.emptyWithCapacity (2 ^ n)
   ⟨getPowers_loop ω (2 ^ n) initArray 1, getPowers_loop_len ω initArray 1 (by simp [initArray])⟩
-
-/-
-def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
-  let emptyList := List.replicate (2 ^ n - 1) ()
-  let powerList : List (ZMod p) := emptyList.scanl (fun acc _ ↦ acc * ω) 1
-
-  ⟨powerList.toArray, by simp only [List.size_toArray, List.length_scanl, List.length_replicate,
-    powerList, emptyList]; exact Nat.sub_add_cancel Nat.one_le_two_pow⟩
--/
 
 theorem getPowers_getElem {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers ω n)[k] = ω ^ k := by
   unfold getPowers
@@ -122,8 +112,8 @@ theorem getPowers_getElem {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers 
     unfold getPowers_loop
     simp [h]
     apply ih
-    · simp
-      aesop
+    · rw [Array.size_push]
+      omega
     · intro i hi
       rw [Array.getElem_push]
       split_ifs with hi
@@ -135,60 +125,50 @@ theorem getPowers_getElem {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers 
       ring
   | case2 arr val h =>
     unfold getPowers_loop
-    simp [h]
+    simp only [h, ↓reduceIte]
     apply h_arr_correct
 
 lemma getPowers_restrictEven {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers ω (n + 1)).restrictEven := by
-  unfold Vector.restrictEven
   ext k hk
-  simp only [getPowers_getElem, Vector.getElem_ofFn, Vector.get_eq_getElem]
+  simp only [Vector.restrictEven, getPowers_getElem, Vector.getElem_ofFn, Vector.get_eq_getElem]
   ring
 
-def Vector.fntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+
+def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
   xs.fntt_aux ω (getPowers ω n)
 
-def Vector.ifntt {n : ℕ} (ω : ZMod p) (xs : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
   (2 ^ n : ZMod p)⁻¹ • xs.fntt ω⁻¹
 
-theorem vector_fntt_eq_tuple_ntt' {n : ℕ} {ω : ZMod p} (xs : Vector (ZMod p) (2 ^ n))
-    (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω (fun i => xs.get i) = fun i => (xs.fntt ω).get i := by
+variable {ω : ZMod p}
+
+theorem vector_fntt_eq_tuple_ntt' (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt' ω xs.get = (xs.fntt ω).get  := by
   funext j
   unfold Vector.fntt
   let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
   fun_induction xs.fntt_aux ω powers with
   | case1 => rfl
   | case2 ω n xs powers powers' ws y_even y_odd left right ih1 ih2 =>
-    simp only [ntt', Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt_aux,
+    simp_rw [ntt', Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt_aux,
       Vector.take_eq_extract, Vector.get_cast]
-    rw [@Vector.get_eq_getElem, ok_even, ok_odd, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
-    simp only [Fin.coe_cast]
-    rw [@Vector.getElem_append]
+    rw [@Vector.get_eq_getElem, restrictEven_of_vector, restrictOdd_of_vector, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
+    simp_rw [Fin.coe_cast, @Vector.getElem_append, Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
     split_ifs with h
-    · simp only [Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
-      congr
-      · exact getPowers_restrictEven
-      · exact Fin.natCast_eq_mk h
-      · simp [Vector.extract, getPowers_getElem]
-      · exact getPowers_restrictEven
-      · exact Fin.natCast_eq_mk h
-    · simp only [Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
-      have hcast : @Nat.cast (Fin (2 ^ n)) (Fin.NatCast.instNatCast (2 ^ n)) ↑j
-          = ⟨↑j - 2 ^ n, by omega⟩ := by
-        rw [@Fin.eq_mk_iff_val_eq]
-        simp only [Nat.succ_eq_add_one, Fin.val_natCast]
-        rw [@Nat.mod_eq_iff]
-        right
-        constructor
-        · omega
-        · use 1
-          grind
-      rw [sub_eq_add_neg, neg_mul_eq_neg_mul]
-      congr
-      · exact getPowers_restrictEven
+    · congr <;> simp [getPowers_restrictEven, Fin.natCast_eq_mk h, Vector.extract, getPowers_getElem]
+    · rw [sub_eq_add_neg, neg_mul_eq_neg_mul, getPowers_restrictEven]
+      congr; swap
       · simp [Vector.extract, getPowers_getElem]
         rw [neg_eq_neg_one_mul]
         nth_rw 1 [← Nat.sub_add_cancel (Nat.le_of_not_lt h), pow_add, mul_comm]
         congr
         exact hω.pow_eq_neg_one
-      · exact getPowers_restrictEven
+      all_goals
+      · simp_rw [Fin.ext_iff, Fin.val_natCast]
+        rw [Nat.mod_eq_sub_mod (by omega)]
+        apply Nat.mod_eq_of_lt (by omega)
+
+theorem Vector.fntt_correct (hω : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get := by
+  rw [← ntt'_eq_ntt hω]
+  exact (vector_fntt_eq_tuple_ntt' xs hω).symm
+
 end vector

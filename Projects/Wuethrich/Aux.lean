@@ -42,9 +42,8 @@ def finTwoPowSuccEquiv {n : ℕ} : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n +
   right_inv x := by
     unfold Fin.double Fin.doubleSucc
     simp only [dite_eq_ite]
-    apply Fin.ext
     split_ifs with h
-    all_goals rw [Sum.elim]
+    all_goals (apply Fin.ext; rw [Sum.elim])
     · apply Nat.two_mul_div_two_of_even
       rw [@Nat.even_iff]
       rw [Fin.mod_def] at h
@@ -87,30 +86,23 @@ def Equiv.subRightFin {n : ℕ} (j : Fin n) : Fin n ≃ Fin n where
   right_inv i := by
     rcases n.eq_zero_or_pos with h | h
     · grind
-    · simp only [Fin.add_def, Fin.sub_def, Nat.add_mod_mod, ← add_assoc]
+    · simp only [Fin.ext_iff, Fin.add_def, Fin.sub_def, Nat.add_mod_mod, ← add_assoc]
       calc
-        ⟨(n - ↑j + ↑i + ↑j) % n, _⟩ = ⟨(n - ↑j + ↑j + ↑i) % n, Nat.mod_lt _ h⟩ := by ring_nf
-        _ = ⟨(n + ↑i) % n, Nat.mod_lt _ h⟩ := by simp
-        _ = ⟨(n % n + ↑i % n) % n, Nat.mod_lt _ h⟩ := by simp
-        _ = ⟨↑i % n, Nat.mod_lt _ h⟩ := by simp
-        _ = i := by simp only [Fin.ext_iff, Nat.mod_eq_iff]; exact Or.inr ⟨i.2, by simp⟩
+        (n - ↑j + ↑i + ↑j) % n = (n - ↑j + ↑j + ↑i) % n := by ring_nf
+        _ = (n + ↑i) % n := by simp
+        _ = (n % n + ↑i % n) % n := by simp
+        _ = ↑i % n:= by simp
+        _ = i := by simp only [Nat.mod_eq_iff]; exact Or.inr ⟨i.2, by simp⟩
 
 @[simp]
 def Equiv.subRightFin_apply {n : ℕ} (i j : Fin n) : Equiv.subRightFin i j = j - i := by rfl
 
 @[simp]
-theorem val_mod_n {n : ℕ} (a : Fin n) : a.val % n = a.val := by
-  rw [@Nat.mod_eq_iff]
-  right
-  exact ⟨a.2, by simp⟩
+theorem val_mod_n {n : ℕ} (a : Fin n) : a.val % n = a.val := Nat.mod_eq_of_lt a.2
 
 theorem sub_val_mod {n : ℕ} {a : Fin n} (h : 0 < a.val) : (n - a.val) % n = n - a.val := by
-  rw [@Nat.mod_eq_iff]
-  right
-  constructor
-  · grind
-  · use 0
-    simp
+  rw [Nat.mod_eq_of_lt]
+  omega
 
 end Fin
 
@@ -124,13 +116,13 @@ def Vector.restrictEven (xs : Vector α (2 ^ (n + 1))) : Vector α (2 ^ n) :=
 def Vector.restrictOdd (xs : Vector α (2 ^ (n + 1))) : Vector α (2 ^ n) :=
   Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val + 1, by omega⟩)
 
-lemma ok_even {xs : Vector α (2 ^ (n + 1))} :
-    restrictEven (fun i => xs.get i) = fun i => xs.restrictEven.get i := by
+lemma restrictEven_of_vector {xs : Vector α (2 ^ (n + 1))} :
+    restrictEven xs.get = xs.restrictEven.get := by
   funext j
   simp [restrictEven, Fin.double, Vector.restrictEven]
 
-lemma ok_odd {xs : Vector α (2 ^ (n + 1))} :
-    restrictOdd (fun i => xs.get i) = fun i => xs.restrictOdd.get i := by
+lemma restrictOdd_of_vector {xs : Vector α (2 ^ (n + 1))} :
+    restrictOdd xs.get = xs.restrictOdd.get := by
   funext j
   simp [restrictOdd, Fin.doubleSucc, Vector.restrictOdd]
 
