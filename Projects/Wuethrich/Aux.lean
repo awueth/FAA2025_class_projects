@@ -33,50 +33,32 @@ def finTwoPowSuccEquiv {n : ℕ} : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n +
       Sum.inr ⟨(i.val - 1) / 2, by omega⟩
   left_inv x := by
     · cases x with
-      | inl val =>
-        simp [Fin.double]
-        rw [@Fin.mod_def]
-        simp_all
-        cases n with
-        | zero => simp
-        | succ =>
-          rw [Nat.mod_eq_of_lt (a := 2) (lt_self_pow₀ one_lt_two (Nat.one_lt_succ_succ _))]
-          simp
+      | inl val
       | inr val =>
-        simp [Fin.doubleSucc]
-        rw [@Fin.mod_def]
-        simp_all
+        simp [Fin.double, Fin.doubleSucc, @Fin.mod_def]
         cases n with
         | zero => simp
-        | succ =>
-          rw [Nat.mod_eq_of_lt (a := 2) (lt_self_pow₀ one_lt_two (Nat.one_lt_succ_succ _))]
-          simp
+        | succ => simp [Nat.mod_eq_of_lt (lt_self_pow₀ one_lt_two (Nat.one_lt_succ_succ _))]
   right_inv x := by
-    simp
+    unfold Fin.double Fin.doubleSucc
+    simp only [dite_eq_ite]
+    apply Fin.ext
     split_ifs with h
-    · rw [Sum.elim_inl, Fin.double]
-      rw [Fin.mod_def, Fin.mk_eq_zero] at h
-      congr
-      refine Nat.two_mul_div_two_of_even ?_
+    all_goals rw [Sum.elim]
+    · apply Nat.two_mul_div_two_of_even
       rw [@Nat.even_iff]
+      rw [Fin.mod_def] at h
+      simp_all
       cases n with
       | zero => simp_all
       | succ n =>
-        have : (2 : Fin (2 ^ (n + 1 + 1))).val = 2 := by
-          rw [Fin.coe_ofNat_eq_mod]
-          exact Nat.mod_eq_of_lt (a := 2) (lt_self_pow₀ one_lt_two (by omega))
-        rw [this] at h
-        exact h
-    · simp only [Sum.elim_inr, Fin.doubleSucc]
-      apply Fin.eq_of_val_eq
-      rw [Fin.mod_def, Fin.mk_eq_zero] at h
+        rw [Nat.mod_eq_of_lt (a := 2) (lt_self_pow₀ one_lt_two (Nat.one_lt_succ_succ n))] at h
+        simp_all
+    · rw [Fin.mod_def, Fin.mk_eq_zero] at h
       cases n with
       | zero => grind
       | succ n =>
-        have : (2 : Fin (2 ^ (n + 1 + 1))).val = 2 := by
-          rw [Fin.coe_ofNat_eq_mod]
-          exact Nat.mod_eq_of_lt (a := 2) (lt_self_pow₀ one_lt_two (by omega))
-        rw [this] at h
+        simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (lt_self_pow₀ one_lt_two (Nat.one_lt_succ_succ _))] at h
         grind
 
 lemma sum_even_odd_split {n : ℕ} (f : Fin (2 ^ (n + 1)) → M) :
