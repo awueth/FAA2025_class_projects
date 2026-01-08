@@ -54,22 +54,6 @@ section vector
 
 variable {n : ℕ} (xs : Vector (ZMod p) (2 ^ n))
 
-def Vector.fntt_aux {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
-    (powers : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
-  match n with
-  | 0 => xs
-  | n + 1 =>
-    let powers' := powers.restrictEven
-    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.take (2 ^ n))
-
-    let y_even := xs.restrictEven.fntt_aux (ω ^ 2) powers'
-    let y_odd  := xs.restrictOdd.fntt_aux (ω ^ 2) powers'
-
-    let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws
-    let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws
-
-    Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)
-
 def getPowers_loop {p : ℕ} (ω : ZMod p) (size : ℕ) (arr : Array (ZMod p)) (val : ZMod p) : Array (ZMod p) :=
   if arr.size < size then
       getPowers_loop ω size (arr.push val) (ω * val)
@@ -133,9 +117,22 @@ lemma getPowers_restrictEven {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers �
   simp only [Vector.restrictEven, getPowers_getElem, Vector.getElem_ofFn, Vector.get_eq_getElem]
   ring
 
+def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPowers ω n)
+  where fntt_aux {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
+    (powers : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+  match n with
+  | 0 => xs
+  | n + 1 =>
+    let powers' := powers.restrictEven
+    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.take (2 ^ n))
 
-def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
-  xs.fntt_aux ω (getPowers ω n)
+    let y_even := fntt_aux xs.restrictEven (ω ^ 2) powers'
+    let y_odd  := fntt_aux xs.restrictOdd (ω ^ 2) powers'
+
+    let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws
+    let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws
+
+    Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)
 
 def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
   (2 ^ n : ZMod p)⁻¹ • xs.fntt ω⁻¹
@@ -146,10 +143,10 @@ theorem vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_re
   funext j
   unfold Vector.fntt
   let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
-  fun_induction xs.fntt_aux ω powers with
+  fun_induction Vector.fntt.fntt_aux xs ω powers with
   | case1 => rfl
   | case2 ω n xs powers powers' ws y_even y_odd left right ih1 ih2 =>
-    simp_rw [ntt_rec, Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt_aux,
+    simp_rw [ntt_rec, Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt.fntt_aux,
       Vector.take_eq_extract, Vector.get_cast]
     rw [@Vector.get_eq_getElem, restrictEven_of_vector, restrictOdd_of_vector, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
     simp_rw [Fin.coe_cast, @Vector.getElem_append, Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]

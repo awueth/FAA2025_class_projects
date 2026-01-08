@@ -17,7 +17,7 @@ def Vector.fntt_auxT {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
     let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws -- Costs O(2 ^ n)
     let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws -- Costs O(2 ^ n)
 
-    let result := (Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right))
+    let result := (Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)) -- Assume this is free
     ✓ result, (2 ^ (n + 1))
 
 def Vector.fntt_auxT_time (ω : ZMod p) (powers : Vector (ZMod p) (2 ^ n)) :
@@ -29,3 +29,37 @@ def Vector.fntt_auxT_time (ω : ZMod p) (powers : Vector (ZMod p) (2 ^ n)) :
     simp only [bind, TimeM.tick, take_eq_extract, TimeM.time_of_bind]
     rw [ih, ih]
     ring
+
+def getPowersT_loop {p : ℕ} (ω : ZMod p) (size : ℕ) (arr : Array (ZMod p)) (val : ZMod p) : TimeM (Array (ZMod p)) :=
+  if arr.size < size then do
+      ✓ ()
+      getPowersT_loop ω size (arr.push val) (ω * val)
+  else
+    pure arr
+termination_by size - arr.size
+
+def getPowersT (ω : ZMod p) (n : ℕ) : TimeM (Vector (ZMod p) (2 ^ n)) := do
+  let initArray := Array.emptyWithCapacity (2 ^ n)
+  let arr ← getPowersT_loop ω (2 ^ n) initArray 1
+  pure ⟨arr, sorry⟩
+
+def Vector.fnttT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := do
+  let powers ← getPowersT ω n
+
+  fntt_auxT xs ω powers
+  where fntt_auxT {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
+    (powers : Vector (ZMod p) (2 ^ n)) : TimeM (Vector (ZMod p) (2 ^ n)) :=
+  match n with
+  | 0 => pure xs
+  | n + 1 => do
+    let powers' := powers.restrictEven -- Assume this is free
+    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.take (2 ^ n)) -- Assume this is free
+
+    let y_even ← xs.restrictEven.fntt_auxT (ω ^ 2) powers'
+    let y_odd  ← xs.restrictOdd.fntt_auxT (ω ^ 2) powers'
+
+    let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws -- Costs O(2 ^ n)
+    let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws -- Costs O(2 ^ n)
+
+    let result := (Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)) -- Assume this is free
+    ✓ result, (2 ^ (n + 1))
