@@ -46,7 +46,7 @@ def Vector.fnttT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := do
   | n + 1 => do
     let powers' ← powers.restrictEvenT
 
-    let ws ← (powers.extractT 0 (2 ^ n)) >>= Vector.castT (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (n.le_add_right 1)))
+    let ws ← (powers.extractT 0 (2 ^ n)) >>= castT (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (n.le_add_right 1)))
 
     let xs_even ← xs.restrictEvenT
     let xs_odd ← xs.restrictOddT
@@ -59,7 +59,7 @@ def Vector.fnttT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := do
 
     appendT left right >>= Vector.castT (Eq.symm (Nat.two_pow_succ n))
 
-lemma Vector.fntt_auxT_time' (ω : ZMod p) (powers : Vector (ZMod p) (2 ^ n)) :
+lemma Vector.fntt_auxT_time (ω : ZMod p) (powers : Vector (ZMod p) (2 ^ n)) :
     (fnttT.fntt_auxT xs ω powers).time = 4 * n * 2 ^ n := by
   induction n generalizing ω with
   | zero => simp [fnttT.fntt_auxT]
@@ -68,8 +68,7 @@ lemma Vector.fntt_auxT_time' (ω : ZMod p) (powers : Vector (ZMod p) (2 ^ n)) :
     simp [bind, TimeM.time_of_bind, ih]
     ring
 
-theorem Vector.fnttT_time (ω : ZMod p)  :
-    (xs.fnttT ω).time = (4 * n + 1) * 2 ^ n := by
+theorem Vector.fnttT_time (ω : ZMod p) : (xs.fnttT ω).time = (4 * n + 1) * 2 ^ n := by
   unfold Vector.fnttT
-  simp [getPowersT_time, Vector.fntt_auxT_time']
+  simp [getPowersT_time, Vector.fntt_auxT_time]
   ring

@@ -69,6 +69,6 @@ def Vector.restrictEvenT (xs : Vector α (2 ^ (n + 1))) : TimeM (Vector α (2 ^ 
 def Vector.restrictOddT (xs : Vector α (2 ^ (n + 1))) : TimeM (Vector α (2 ^ n)) :=
   ⟨Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val + 1, by omega⟩), 2 ^ n⟩
 
-def zipWith3T {δ : Type} {α β γ : Type*} {n : ℕ} (f : α → β → γ → δ)
+def Vector.zipWith3T {δ : Type} {α β γ : Type*} {n : ℕ} (f : α → β → γ → δ)
     (v1 : Vector α n) (v2 : Vector β n) (v3 : Vector γ n) : TimeM (Vector δ n) :=
   ⟨⟨Array.zipWith3 f v1.toArray v2.toArray v3.toArray, by simp⟩, n⟩
