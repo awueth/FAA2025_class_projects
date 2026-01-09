@@ -1,4 +1,4 @@
-import Projects.Wuethrich.Array
+import Projects.Wuethrich.Array.Lemmas
 import Projects.Wuethrich.Aux
 
 variable {α : Type} {n : ℕ}
