@@ -26,7 +26,6 @@ namespace Vector
 def zipWith3 {α β γ δ : Type*} {n : ℕ} (f : α → β → γ → δ)
     (v1 : Vector α n) (v2 : Vector β n) (v3 : Vector γ n) : Vector δ n :=
   ⟨Array.zipWith3 f v1.toArray v2.toArray v3.toArray, by simp⟩
-  --Vector.ofFn (fun i => f (v1.get i) (v2.get i) (v3.get i))
 
 variable {α β γ δ : Type*}
 
