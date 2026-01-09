@@ -106,32 +106,6 @@ theorem sub_val_mod {n : ℕ} {a : Fin n} (h : 0 < a.val) : (n - a.val) % n = n 
 
 end Fin
 
-section Vector
-
-variable {α : Type} {n : ℕ}
-
-def Vector.restrictEven (xs : Vector α (2 ^ (n + 1))) : Vector α (2 ^ n) :=
-  Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val, by omega⟩)
-
-def Vector.restrictOdd (xs : Vector α (2 ^ (n + 1))) : Vector α (2 ^ n) :=
-  Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val + 1, by omega⟩)
-
-lemma restrictEven_of_vector {xs : Vector α (2 ^ (n + 1))} :
-    restrictEven xs.get = xs.restrictEven.get := by
-  funext j
-  simp [restrictEven, Fin.double, Vector.restrictEven]
-
-lemma restrictOdd_of_vector {xs : Vector α (2 ^ (n + 1))} :
-    restrictOdd xs.get = xs.restrictOdd.get := by
-  funext j
-  simp [restrictOdd, Fin.doubleSucc, Vector.restrictOdd]
-
-def Vector.zipWith3 {α β γ δ : Type*} {n : ℕ} (f : α → β → γ → δ)
-    (v1 : Vector α n) (v2 : Vector β n) (v3 : Vector γ n) : Vector δ n :=
-  Vector.ofFn (fun i => f (v1.get i) (v2.get i) (v3.get i))
-
-end Vector
-
 lemma cast_divides_helper {n : ℕ} (k l : Fin n) : ↑n ∣ (l : ℤ) - ↑k ↔ l = k := by
   constructor
   · intro hd

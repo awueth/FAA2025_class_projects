@@ -1,4 +1,5 @@
 import Projects.Wuethrich.NTT
+import Projects.Wuethrich.Vector
 
 variable {n p : ℕ} [Fact p.Prime]
 
@@ -149,7 +150,7 @@ theorem vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_re
     simp_rw [ntt_rec, Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt.fntt_aux,
       Vector.take_eq_extract, Vector.get_cast]
     rw [@Vector.get_eq_getElem, restrictEven_of_vector, restrictOdd_of_vector, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
-    simp_rw [Fin.coe_cast, @Vector.getElem_append, Vector.zipWith3, Vector.get_cast, Vector.getElem_ofFn, Fin.cast_mk]
+    simp only [Fin.coe_cast, Vector.getElem_append, Vector.getElem_zipWith3, Vector.getElem_cast]
     split_ifs with h
     · congr <;> simp [getPowers_restrictEven, Fin.natCast_eq_mk h, Vector.extract, getPowers_getElem]
     · rw [sub_eq_add_neg, neg_mul_eq_neg_mul, getPowers_restrictEven]

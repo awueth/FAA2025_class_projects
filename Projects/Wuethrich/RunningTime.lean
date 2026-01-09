@@ -1,5 +1,6 @@
 import Projects.Wuethrich.API
 import Projects.Wuethrich.Aux
+import Projects.Wuethrich.Vector
 
 variable {n p : ℕ} [Fact p.Prime] (xs : Vector (ZMod p) (2 ^ n))
 
