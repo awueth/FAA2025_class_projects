@@ -125,7 +125,7 @@ def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPo
   | 0 => xs
   | n + 1 =>
     let powers' := powers.restrictEven
-    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.take (2 ^ n))
+    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.extract 0 (2 ^ n))
 
     let y_even := fntt_aux xs.restrictEven (ω ^ 2) powers'
     let y_odd  := fntt_aux xs.restrictOdd (ω ^ 2) powers'
@@ -147,8 +147,7 @@ theorem vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_re
   fun_induction Vector.fntt.fntt_aux xs ω powers with
   | case1 => rfl
   | case2 ω n xs powers powers' ws y_even y_odd left right ih1 ih2 =>
-    simp_rw [ntt_rec, Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt.fntt_aux,
-      Vector.take_eq_extract, Vector.get_cast]
+    simp_rw [ntt_rec, Nat.succ_eq_add_one, Fin.ofNat_eq_cast, Vector.fntt.fntt_aux, Vector.get_cast]
     rw [@Vector.get_eq_getElem, restrictEven_of_vector, restrictOdd_of_vector, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
     simp only [Fin.coe_cast, Vector.getElem_append, Vector.getElem_zipWith3, Vector.getElem_cast]
     split_ifs with h

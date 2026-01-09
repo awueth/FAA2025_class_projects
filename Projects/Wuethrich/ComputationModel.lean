@@ -5,7 +5,7 @@ Authors: Sorrachai Yingchareonthawornchai
 -/
 
 import Mathlib.Tactic -- imports all of the tactics in Lean's maths library
-
+import Projects.Wuethrich.Array.Lemmas
 
 set_option autoImplicit false
 set_option tactic.hygienic false
@@ -49,3 +49,26 @@ attribute [simp] Bind.bind Pure.pure TimeM.pure
 
 
 end TimeM
+
+variable {m n : ℕ} {α : Type}
+
+-- Does not copy the underlying array
+def Vector.castT (h : n = m) (xs : Vector α n) : TimeM (Vector α m) := ⟨xs.cast h, 0⟩
+
+-- Does copy the underlying array
+def Vector.extractT  (xs : Vector α n) (start : Nat := 0) (stop : Nat := n) :
+    TimeM (Vector α (min stop n - start)) :=
+  ⟨xs.extract start stop, n⟩
+
+def Vector.appendT (xs : Vector α n) (ys : Vector α m) : TimeM (Vector α (n + m)) :=
+  ⟨xs ++ ys, n⟩
+
+def Vector.restrictEvenT (xs : Vector α (2 ^ (n + 1))) : TimeM (Vector α (2 ^ n)) :=
+  ⟨Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val, by omega⟩), 2 ^ n⟩
+
+def Vector.restrictOddT (xs : Vector α (2 ^ (n + 1))) : TimeM (Vector α (2 ^ n)) :=
+  ⟨Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val + 1, by omega⟩), 2 ^ n⟩
+
+def zipWith3T {δ : Type} {α β γ : Type*} {n : ℕ} (f : α → β → γ → δ)
+    (v1 : Vector α n) (v2 : Vector β n) (v3 : Vector γ n) : TimeM (Vector δ n) :=
+  ⟨⟨Array.zipWith3 f v1.toArray v2.toArray v3.toArray, by simp⟩, n⟩
