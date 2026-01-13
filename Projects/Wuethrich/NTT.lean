@@ -33,6 +33,30 @@ theorem ntt_smul (ω : ZMod p) (x : Fin n → ZMod p) (a : ZMod p) : ntt ω (a �
   simp [ntt, Finset.mul_sum]
   group
 
+theorem ntt_shift {ω : ZMod p} (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrimitiveRoot ω n)  :
+    ntt ω x (i - j) = ntt ω (fun k ↦ ω ^ (-(j : ℤ) * k) * x k) i := by
+  unfold ntt
+  by_cases h0 : n = 0; subst h0; exact i.elim0
+  refine Finset.sum_congr rfl (fun k _ ↦ ?_)
+  simp_rw [mul_comm _ (x k), mul_assoc]
+  congr
+  rw [← zpow_add₀ (h.ne_zero h0)]
+  by_cases hij : j ≤ i
+  · congr
+    norm_cast
+    simp [Fin.sub_val_of_le hij, Nat.mul_sub]
+    rw [Nat.cast_sub (by gcongr; exact hij)]
+    push_cast
+    ring
+  · rw [@Fin.intCast_val_sub_eq_sub_add_ite]
+    simp only [hij, ↓reduceIte]
+    rw [mul_add]
+    rw [zpow_add₀ (h.ne_zero h0), zpow_mul' ω k n, zpow_natCast ω n, h.pow_eq_one, one_zpow, mul_one]
+    congr
+    ring
+
+variable {ω : ZMod p}
+
 lemma left_inv_aux (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
     intt_aux ω (ntt ω x) = n • x := by
   by_cases h₀ : n = 0; subst h₀; funext i; exact i.elim0
@@ -65,40 +89,21 @@ lemma right_inv_aux (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
 theorem left_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
     intt ω (ntt ω x) = x := by
   rw [intt, inv_smul_eq_iff₀]
-  · simp_all [left_inv_aux ω h x]
+  · simp_all [left_inv_aux h x]
     rfl
   · rw [ne_eq, ZMod.natCast_eq_zero_iff]
     exact hp
 
 theorem right_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
     ntt ω (intt ω x) = x := by
-  rw [intt, ntt_smul, right_inv_aux ω h x, inv_smul_eq_iff₀]
+  rw [intt, ntt_smul, right_inv_aux h x, inv_smul_eq_iff₀]
   · simp_all
     rfl
   · rw [ne_eq, ZMod.natCast_eq_zero_iff]
     exact hp
 
-theorem ntt_shift {ω : ZMod p} (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrimitiveRoot ω n)  :
-    ntt ω x (i - j) = ntt ω (fun k ↦ ω ^ (-(j : ℤ) * k) * x k) i := by
-  unfold ntt
-  by_cases h0 : n = 0; subst h0; exact i.elim0
-  refine Finset.sum_congr rfl (fun k _ ↦ ?_)
-  simp_rw [mul_comm _ (x k), mul_assoc]
-  congr
-  rw [← zpow_add₀ (h.ne_zero h0)]
-  by_cases hij : j ≤ i
-  · congr
-    norm_cast
-    simp [Fin.sub_val_of_le hij, Nat.mul_sub]
-    rw [Nat.cast_sub (by gcongr; exact hij)]
-    push_cast
-    ring
-  · rw [@Fin.intCast_val_sub_eq_sub_add_ite]
-    simp only [hij, ↓reduceIte]
-    rw [mul_add]
-    rw [zpow_add₀ (h.ne_zero h0), zpow_mul' ω k n, zpow_natCast ω n, h.pow_eq_one, one_zpow, mul_one]
-    congr
-    ring
+
+section convolution
 
 variable {ω : ZMod p} (x y : Fin n → ZMod p)
 
@@ -163,3 +168,5 @@ theorem convolution_intt (h : IsPrimitiveRoot ω n) (hp : ¬p ∣ n) : (intt ω 
   rw [inv_mul_eq_iff_eq_mul₀]
   rw [← @ZMod.val_ne_zero, ne_eq, ZMod.val_natCast]
   exact Nat.dvd_iff_mod_eq_zero.mpr.mt hp
+
+end convolution

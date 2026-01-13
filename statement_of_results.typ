@@ -12,7 +12,7 @@
   base: "theorem",
   titlefmt: strong
 )
-#let definition = thmbox("definition", "Definition", inset: (x: 1.2em, top: 1em))
+#let definition = thmbox("definition", "Definition", inset: (x: 0em, top: 0em))
 
 #let example = thmplain("example", "Example").with(numbering: none)
 #let proof = thmproof("proof", "Proof")
@@ -192,17 +192,17 @@ Assuming that $n = 2 ^ l$ for some $l in NN$ and keeping in mind that $omega^(k 
 
 The statements in this section are in the file `NTT.lean`, for this entire section assume the variables
 ```lean
-variable {n p : ℕ} [Fact p.Prime] (ω : ZMod p)
+variable {n p : ℕ} [Fact p.Prime]
 ```
 We defined NTT and INTT the following way:
 ```lean
-def ntt : (Fin n → ZMod p) → (Fin n → ZMod p) :=
+def ntt (ω : ZMod p) : (Fin n → ZMod p) → (Fin n → ZMod p) :=
   fun x k ↦ ∑ j, x j * ω ^ ((j * k) : ℤ)
 
-def intt_aux : (Fin n → ZMod p) → (Fin n → ZMod p) :=
+def intt_aux (ω : ZMod p) : (Fin n → ZMod p) → (Fin n → ZMod p) :=
   fun x k ↦ ∑ j, x j * ω ^ (-(j * k : ℤ))
 
-def intt (x : Fin n → ZMod p) : (Fin n → ZMod p) := 
+def intt (ω : ZMod p) (x : Fin n → ZMod p) : (Fin n → ZMod p) := 
   (n : ZMod p)⁻¹ • intt_aux ω x
 ```
 Defining tuples as functions from `Fin n` is the standard way to represent fixed-length tuples in mathlib, this allow us to us to invoke various lemmas about `Fin n` and sums over `Fin n` from mathlib. 
@@ -210,6 +210,8 @@ Defining tuples as functions from `Fin n` is the standard way to represent fixed
 The theorems `ntt_add` and `ntt_smul` show that the NTT is linear. The theorems `left_inv` and `right_inv` show that NTT and INTT are inverses when `p` does not divide `n`, for this we do assume that `ω` is a primitive `n`-th root of unity:
 
 ```lean
+variable {ω : ZMod p}
+
 theorem left_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
     intt ω (ntt ω x) = x
 
@@ -217,6 +219,14 @@ theorem right_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMo
     ntt ω (intt ω x) = x
 ```
 
+The main ingredient used in the proofs of these theorems is the orthogonality of roots of unity @orthogonality, which is we formalized in the file `PrimitiveRoots.lean` and is called `IsPrimitiveRoot.sum_zpow_mul_eq`. 
+
+The section `convolution` contains the fornalizations of the convolution theorems. The circular convolution was not defined in mathlib, so we defined it ourselves as `convolution` in the file `Convolution.lean`. The theorems `ntt_convolution` and `intt_convolution` as well as `convolution_ntt` and `convolution_intt` formalize the convolution theorems.
+
 == Primitive roots of unity
 
 The theory of primitvie roots is well developed in mathlib, the missing results we need are in the file `PrimitiveRoots.lean`. This file contains the fact that if `ω` is a primitive `n`-th root of unity in `Zmod(p)`, then $omega ^ 2$ is a primitive `n/2`-th root of unity, as well as @orthogonality
+
+== FNTT on Vectors 
+
+== Running time analysis
