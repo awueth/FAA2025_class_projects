@@ -1,6 +1,7 @@
 import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.Algebra.Field.GeomSum
+import Projects.Wuethrich.Aux
 
 variable {M : Type} [CommMonoid M] {ω : M}
 
@@ -54,3 +55,21 @@ lemma pow_eq_neg_one (h : IsPrimitiveRoot ω (2 ^ (n + 1))) : ω ^ (2 ^ n) = -1 
       apply Nat.not_dvd_of_pos_of_lt (pow_pos (by decide) _)
       gcongr
       all_goals simp
+
+lemma omega_shift (h : IsPrimitiveRoot ω n) (i j k : Fin n) :
+     ω ^ (i.val * k.val) = ω ^ ((j.val + (i - j).val) * k.val) := by
+  rw [@Fin.coe_sub, @Nat.add_mod_eq_sub]
+  simp only [val_mod_n]
+  split_ifs with hi
+  · rcases j.val.eq_zero_or_pos with h0 | h0
+    · simp_all
+    · simp only [sub_val_mod h0, tsub_zero]
+      have : ↑j + (n - ↑j + ↑i) = n + ↑i := by
+        zify [j.2]
+        ring
+      rw [this]
+      ring_nf
+      simp [pow_mul' ω k.val n, h.pow_eq_one]
+  · congr
+    have : j.val > 0 := by contrapose hi; simp_all
+    grind [sub_val_mod]

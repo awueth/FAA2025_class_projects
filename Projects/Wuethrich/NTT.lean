@@ -102,25 +102,6 @@ theorem ntt_shift {ω : ZMod p} (x : Fin n → ZMod p) (i j : Fin n) (h : IsPrim
 
 variable {ω : ZMod p} (x y : Fin n → ZMod p)
 
-lemma omega_shift (h : IsPrimitiveRoot ω n) (i j k : Fin n) :
-     ω ^ (i.val * k.val) = ω ^ ((j.val + (i - j).val) * k.val) := by
-  rw [@Fin.coe_sub, @Nat.add_mod_eq_sub]
-  simp only [val_mod_n]
-  split_ifs with hi
-  · rcases j.val.eq_zero_or_pos with h0 | h0
-    · simp_all
-    · simp only [sub_val_mod h0, tsub_zero]
-      have : ↑j + (n - ↑j + ↑i) = n + ↑i := by
-        zify [j.2]
-        ring
-      rw [this]
-      ring_nf
-      simp [pow_mul' ω k.val n, h.pow_eq_one]
-  · congr
-    have : j.val > 0 := by contrapose hi; simp_all
-    grind [sub_val_mod]
-
-
 theorem ntt_convolution (hω : IsPrimitiveRoot ω n) : ntt ω (x ⋆ y) = (ntt ω x) * (ntt ω y) := by
   funext k
   conv_lhs => simp only [Pi.mul_apply, ntt, convolution, Finset.sum_mul]; rw [Finset.sum_comm]
@@ -132,7 +113,7 @@ theorem ntt_convolution (hω : IsPrimitiveRoot ω n) : ntt ω (x ⋆ y) = (ntt �
       rw [Equiv.subRightFin_apply]
       congr 1
       norm_cast
-      apply omega_shift hω
+      apply hω.omega_shift
     _ = ∑ j, ∑ l, (x j * ω ^ ((j : ℤ) * k)) * (y l * ω ^ ((l : ℤ) * k)) := by
       simp_rw [add_mul]
       norm_cast
