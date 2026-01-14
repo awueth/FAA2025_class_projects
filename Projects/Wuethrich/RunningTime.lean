@@ -59,6 +59,8 @@ def Vector.fnttT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := do
 
     appendT left right >>= Vector.castT (Eq.symm (Nat.two_pow_succ n))
 
+def Vector.ifnttT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := Vector.fnttT xs ω⁻¹
+
 lemma Vector.fntt_auxT_time (ω : ZMod p) (powers : Vector (ZMod p) (2 ^ n)) :
     (fnttT.fntt_auxT xs ω powers).time = 4 * n * 2 ^ n := by
   induction n generalizing ω with
@@ -72,3 +74,22 @@ theorem Vector.fnttT_time (ω : ZMod p) : (xs.fnttT ω).time = (4 * n + 1) * 2 ^
   unfold Vector.fnttT
   simp [getPowersT_time, Vector.fntt_auxT_time]
   ring
+
+section convolution
+
+variable (ys : Vector (ZMod p) (2 ^ n))
+
+def Vector.fastConvolutionT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := do
+  let xs_hat ← xs.fnttT ω
+  let ys_hat ← ys.fnttT ω
+  let zs ← xs_hat.mulT ys_hat
+
+  zs.ifnttT ω
+
+theorem Vector.fastConvolutionT_time (ω : ZMod p) :
+    (xs.fastConvolutionT ys ω).time = (12 * n + 4) * 2 ^ n := by
+  unfold Vector.fastConvolutionT
+  simp [bind, TimeM.time_of_bind, Vector.fnttT_time, Vector.ifnttT, Vector.mulT]
+  ring
+
+end convolution
