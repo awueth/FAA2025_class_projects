@@ -1,5 +1,8 @@
+import Batteries.Data.Vector.Lemmas
+import Mathlib.Algebra.Algebra.Defs
 import Mathlib.Algebra.BigOperators.Ring.Finset
-import Mathlib.Algebra.Group.Action.Defs
+import Mathlib.Algebra.Group.Action.Pi
+import Mathlib.GroupTheory.GroupAction.Ring
 
 section
 
@@ -29,8 +32,13 @@ section
 
 variable {n : ℕ} {R : Type} [Ring R] (x y : Vector R n)
 
-def vConvolution : Vector R n := Vector.ofFn (convolution x.get y.get)
+def Vector.convolution : Vector R n := Vector.ofFn (x.get ⋆ y.get)
 
-def vMul : Vector R n := Vector.ofFn (x.get * y.get)
+theorem Vector.get_convolution : (x.convolution y).get = x.get ⋆ y.get := by
+  ext i
+  simp [Vector.convolution]
+
+theorem Vector.getElem_convolution {i : ℕ} (h : i < n) : (x.convolution y)[i]'h = (x.get ⋆ y.get) ⟨i, h⟩ := by
+  simp [Vector.convolution]
 
 end

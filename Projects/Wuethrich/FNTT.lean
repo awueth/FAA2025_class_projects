@@ -1,5 +1,6 @@
 import Projects.Wuethrich.NTT
 import Projects.Wuethrich.Vector
+import Projects.Wuethrich.Convolution
 
 variable {n p : ℕ} [Fact p.Prime]
 
@@ -140,7 +141,7 @@ def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
 
 variable {ω : ZMod p}
 
-theorem vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.get = (xs.fntt ω).get  := by
+lemma vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.get = (xs.fntt ω).get  := by
   funext j
   unfold Vector.fntt
   let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
@@ -176,5 +177,52 @@ theorem Vector.ifntt_correct (hω : IsPrimitiveRoot ω (2 ^ n)) : (xs.ifntt ω).
   congr
   rw [← xs.fntt_correct hω.inv]
   rfl
+
+theorem Vector.getElem_fntt {i : ℕ} (h : IsPrimitiveRoot ω (2 ^ n)) (hi : i < 2 ^ n) : (xs.fntt ω)[i]'hi = (ntt ω xs.get) ⟨i, hi⟩ := by
+  rw [← Vector.fntt_correct xs h]
+  rfl
+
+theorem Vector.getElem_ifntt {i : ℕ} (h : IsPrimitiveRoot ω (2 ^ n)) (hi : i < 2 ^ n) : (xs.ifntt ω)[i]'hi = (intt ω xs.get) ⟨i, hi⟩ := by
+  rw [← Vector.ifntt_correct xs h]
+  rfl
+
+theorem Vector.ifntt_fntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) : (xs.fntt ω).ifntt ω = xs := by
+  ext i hi
+  rw [(xs.fntt ω).getElem_ifntt h hi, fntt_correct xs h, left_inv hp h]
+  rfl
+
+theorem Vector.fntt_ifntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) : (xs.ifntt ω).fntt ω = xs := by
+  ext i hi
+  rw [(xs.ifntt ω).getElem_fntt h hi, ifntt_correct xs h, right_inv hp h]
+  rfl
+
+variable (ys : Vector (ZMod p) (2 ^ n))
+
+theorem Vector.fntt_convolution (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.convolution ys).fntt ω  = (xs.fntt ω).mul (ys.fntt ω) := by
+  ext i hi
+  unfold Vector.mul
+  simp only [Vector.getElem_fntt _ h, getElem_zipWith, ← ntt_convolution_apply xs.get ys.get h]
+  congr
+  exact Vector.get_convolution xs ys
+
+theorem Vector.convolution_ifntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) :
+    (xs.ifntt ω).convolution (ys.ifntt ω) = (xs.mul ys).ifntt ω := by
+  ext i hi
+  simp only [Vector.getElem_ifntt _ h, Vector.getElem_convolution]
+  have : (xs.mul ys).get = xs.get * ys.get := by
+    ext i
+    simp [Vector.mul, @get_eq_getElem]
+  rw [this, ← convolution_intt_apply xs.get ys.get h hp ⟨i, hi⟩]
+  congr
+  · exact ifntt_correct xs h
+  · exact ifntt_correct ys h
+
+def Vector.fastConvolution (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
+  ((xs.fntt ω).mul (ys.fntt ω)).ifntt ω
+
+theorem Vector.fastConvolution_correct (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) :
+    (xs.fastConvolution ys ω) = xs.convolution ys := by
+  simp_rw [Vector.fastConvolution, ← Vector.convolution_ifntt _ _ h hp, Vector.ifntt_fntt _ h hp]
+
 
 end vector

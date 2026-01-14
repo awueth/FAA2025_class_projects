@@ -107,8 +107,7 @@ section convolution
 
 variable {ω : ZMod p} (x y : Fin n → ZMod p)
 
-theorem ntt_convolution (hω : IsPrimitiveRoot ω n) : ntt ω (x ⋆ y) = (ntt ω x) * (ntt ω y) := by
-  funext k
+theorem ntt_convolution_apply (h : IsPrimitiveRoot ω n) (k : Fin n) : ntt ω (x ⋆ y) k = (ntt ω x) k * (ntt ω y) k:= by
   conv_lhs => simp only [Pi.mul_apply, ntt, convolution, Finset.sum_mul]; rw [Finset.sum_comm]
   calc
     ∑ j, ∑ i, x j * y (i - j) * ω ^ ((i : ℤ) * ↑↑k) = ∑ j, ∑ l, x j * y l * ω ^ ((j + l : ℤ) * ↑↑k) := by
@@ -118,7 +117,7 @@ theorem ntt_convolution (hω : IsPrimitiveRoot ω n) : ntt ω (x ⋆ y) = (ntt �
       rw [Equiv.subRightFin_apply]
       congr 1
       norm_cast
-      apply hω.omega_shift
+      apply h.omega_shift
     _ = ∑ j, ∑ l, (x j * ω ^ ((j : ℤ) * k)) * (y l * ω ^ ((l : ℤ) * k)) := by
       simp_rw [add_mul]
       norm_cast
@@ -126,16 +125,20 @@ theorem ntt_convolution (hω : IsPrimitiveRoot ω n) : ntt ω (x ⋆ y) = (ntt �
       group
     _ = ntt ω x k * ntt ω y k := by rw [← Finset.sum_mul_sum]; rfl
 
-theorem intt_convolution (h : IsPrimitiveRoot ω n) : intt ω (x ⋆ y) = n • (intt ω x) * (intt ω y) := by
+theorem ntt_convolution (h : IsPrimitiveRoot ω n) : ntt ω (x ⋆ y) = (ntt ω x) * (ntt ω y) :=
+  funext (fun k ↦ ntt_convolution_apply x y h k)
+
+theorem intt_convolution_apply (h : IsPrimitiveRoot ω n) (i : Fin n) : intt ω (x ⋆ y) i = n • (intt ω x) i * (intt ω y) i := by
   simp_rw [intt_as_ntt, ntt_convolution x y h.inv]
-  funext i
-  simp only [Pi.mul_apply, nsmul_eq_mul, Pi.natCast_apply]
+  simp only [Pi.mul_apply, nsmul_eq_mul]
   grind
 
-theorem convolution_ntt (h : IsPrimitiveRoot ω n) : (ntt ω x) ⋆ (ntt ω y) = n • ntt ω (x * y) := by
-  funext k
+theorem intt_convolution (h : IsPrimitiveRoot ω n) : intt ω (x ⋆ y) = n • (intt ω x) * (intt ω y) :=
+  funext (fun k ↦ intt_convolution_apply x y h k)
+
+theorem convolution_ntt_apply (h : IsPrimitiveRoot ω n) (k : Fin n) : ((ntt ω x) ⋆ (ntt ω y)) k = n • ntt ω (x * y) k := by
   by_cases h0 : n = 0; unfold ntt convolution; subst h0; simp_all
-  simp only [Pi.smul_apply, nsmul_eq_mul]
+  rw [nsmul_eq_mul]
   calc
     ((ntt ω x) ⋆ (ntt ω y)) k = ∑ i, ntt ω x i * ntt ω y (k - i) := by rfl
     _ = ∑ i, ntt ω x i * ntt ω (fun l ↦ ω ^ (-(i : ℤ) * l) * y l) k := by simp_rw [ntt_shift y k _ h]
@@ -159,6 +162,9 @@ theorem convolution_ntt (h : IsPrimitiveRoot ω n) : (ntt ω x) ⋆ (ntt ω y) =
     _ = ∑ j, x j * y j * ω ^ ((j : ℤ) * k) * n := by simp [cast_divides_helper]
     _ = n * ntt ω (x * y) k := by rw [← Finset.sum_mul, mul_comm]; rfl
 
+theorem convolution_ntt (h : IsPrimitiveRoot ω n) : (ntt ω x) ⋆ (ntt ω y) = n • ntt ω (x * y) :=
+  funext (fun k ↦ convolution_ntt_apply x y h k)
+
 theorem convolution_intt (h : IsPrimitiveRoot ω n) (hp : ¬p ∣ n) : (intt ω x) ⋆ (intt ω y) = intt ω (x * y) := by
   simp only [intt_as_ntt', Pi.smul_apply]
   rw [convolution_smul_left, convolution_smul_right, convolution_ntt _ _ h.inv]
@@ -168,5 +174,8 @@ theorem convolution_intt (h : IsPrimitiveRoot ω n) (hp : ¬p ∣ n) : (intt ω 
   rw [inv_mul_eq_iff_eq_mul₀]
   rw [← @ZMod.val_ne_zero, ne_eq, ZMod.val_natCast]
   exact Nat.dvd_iff_mod_eq_zero.mpr.mt hp
+
+theorem convolution_intt_apply (h : IsPrimitiveRoot ω n) (hp : ¬p ∣ n) (i : Fin n) : ((intt ω x) ⋆ (intt ω y)) i = intt ω (x * y) i := by
+  rw [convolution_intt x y h hp]
 
 end convolution
