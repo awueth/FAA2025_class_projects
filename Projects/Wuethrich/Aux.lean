@@ -47,7 +47,7 @@ def finTwoPowSuccEquiv {n : ℕ} : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n +
     · apply Nat.two_mul_div_two_of_even
       rw [@Nat.even_iff]
       rw [Fin.mod_def] at h
-      simp_all
+      simp_all only [Fin.coe_ofNat_eq_mod, Fin.mk_eq_zero]
       cases n with
       | zero => simp_all
       | succ n =>
@@ -60,6 +60,7 @@ def finTwoPowSuccEquiv {n : ℕ} : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n +
         simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (lt_self_pow₀ one_lt_two (Nat.one_lt_succ_succ _))] at h
         grind
 
+-- Split the sum over `Fin (2 ^ (n + 1))` into sums over even and odd indices.
 lemma sum_even_odd_split {n : ℕ} (f : Fin (2 ^ (n + 1)) → M) :
     ∑ i : Fin (2 ^ (n + 1)), f i
      = ∑ j : Fin (2 ^ n), f j.double +
@@ -70,6 +71,7 @@ lemma sum_even_odd_split {n : ℕ} (f : Fin (2 ^ (n + 1)) → M) :
   · intro i
     simp only [Equiv.toFun_as_coe, Equiv.apply_symm_apply]
 
+-- Change of variables: subtraction by a fixed `j` is an equivalence on `Fin n`.
 def Equiv.subRightFin {n : ℕ} (j : Fin n) : Fin n ≃ Fin n where
   toFun l := l - j
   invFun l := l + j

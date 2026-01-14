@@ -2,8 +2,33 @@ import Projects.Wuethrich.NTT
 import Projects.Wuethrich.Vector
 import Projects.Wuethrich.Convolution
 
+/-!
+# Fast Number Theoretic Transform (FNTT) on Vectors
+
+This file defines the Fast Number Theoretic Transform (FNTT) and its inverse (IFNTT) acting on `Vector (ZMod p) (2 ^ n)`, where `p` is a prime number.
+
+## Main definitions
+
+* `Vector.fntt ω`: The Fast NTT on vectors.
+* `Vector.ifntt ω`: The inverse Fast NTT on vectors.
+* `Vector.fastConvolution ω`: Fast convolution algorithm using FNTT.
+
+## Main theorems
+
+* `Vector.fntt_correct`: The FNTT on vectors correctly computes the NTT.
+* `Vector.ifntt_correct`: The IFNTT on vectors correctly computes the inverse NTT.
+* `Vector.ifntt_fntt`: The IFNTT is a left inverse of the FNTT.
+* `Vector.fntt_ifntt`: The FNTT is a right inverse of the IFNTT.
+* `Vector.fntt_convolution`: The FNTT transforms convolution into pointwise multiplication.
+* `Vector.convolution_ifntt`: The convolution of IFNTTs equals IFNTT of pointwise product.
+* `Vector.fastConvolution_correct`: Correctness of the fast convolution algorithm.
+
+-/
+
 variable {n p : ℕ} [Fact p.Prime]
 
+/-- Recursive definition of the NTT of a tuple evaluated at `k`,
+used as an intermediate step in proving FNTT correctness -/
 def ntt_rec {n : ℕ} (ω : ZMod p) (x : Fin (2 ^ n) → ZMod p) (k : Fin (2 ^ n)) : ZMod p :=
   match n with
   | 0 => x k
@@ -18,6 +43,7 @@ section ntt_rec_correct
 
 variable {ω : ZMod p} (x : Fin (2 ^ (n + 1)) → ZMod p)
 
+/-- Splitting lemma for the NTT, expressing it in terms of the NTTs of the even and odd parts. -/
 lemma ntt_split (h : IsPrimitiveRoot ω (2 ^ (n + 1))) (k : Fin (2 ^ (n + 1))) : ntt ω x k =
     ntt (ω ^ 2) (restrictEven x) (Fin.ofNat (2 ^ n) k) +
     (ω ^ k.val) * ntt (ω ^ 2) (restrictOdd x) (Fin.ofNat (2 ^ n) k) := by
@@ -37,6 +63,7 @@ lemma ntt_split (h : IsPrimitiveRoot ω (2 ^ (n + 1))) (k : Fin (2 ^ (n + 1))) :
     simp [mul_right_comm, pow_mul, ← h.pow_two_fin_of_nat]
     ring
 
+/-- The recursive definition of the NTT coincides with the standard NTT definition. -/
 theorem ntt_rec_eq_ntt (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMod p) :
     ntt_rec ω x = ntt ω x := by
   funext k
@@ -56,6 +83,7 @@ section vector
 
 variable {n : ℕ} (xs : Vector (ZMod p) (2 ^ n))
 
+/-- Helper function to compute powers of a primitive root of unity, by iteratively multiplying by `ω`. -/
 def getPowers_loop {p : ℕ} (ω : ZMod p) (size : ℕ) (arr : Array (ZMod p)) (val : ZMod p) : Array (ZMod p) :=
   if arr.size < size then
       getPowers_loop ω size (arr.push val) (ω * val)
@@ -63,6 +91,10 @@ def getPowers_loop {p : ℕ} (ω : ZMod p) (size : ℕ) (arr : Array (ZMod p)) (
     arr
 termination_by size - arr.size
 
+/--
+The size of the array returned by `getPowers_loop` is equal to the requested size.
+Used to ensure well-definedness of `getPowers`.
+-/
 lemma getPowers_loop_len {p size : ℕ} (ω : ZMod p) (arr : Array (ZMod p)) (val : ZMod p)
     (h_sz : arr.size ≤ size) :
     (getPowers_loop ω size arr val).size = size := by
@@ -73,6 +105,7 @@ lemma getPowers_loop_len {p size : ℕ} (ω : ZMod p) (arr : Array (ZMod p)) (va
     exact Nat.succ_le_of_lt h
   | case2 arr val h => exact (eq_of_ge_of_le h_sz (Nat.le_of_not_lt h)).symm
 
+/-- Computes the first `2 ^ n` powers of a primitive root of unity `ω` and stores them in a vector. -/
 def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
   let initArray := Array.emptyWithCapacity (2 ^ n)
   ⟨getPowers_loop ω (2 ^ n) initArray 1, getPowers_loop_len ω initArray 1 (by simp [initArray])⟩
@@ -80,19 +113,15 @@ def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
 theorem getElem_getPowers {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers ω n)[k] = ω ^ k := by
   unfold getPowers
   simp only [Vector.getElem_mk]
-
   let arr := Array.emptyWithCapacity (α := ZMod p) (2 ^ n)
   let val := (1 : ZMod p)
-
   suffices ∀ arr val,
     (h_sz : arr.size ≤ 2 ^ n) →                 -- The array doesn't exceed capacity
     (∀ i (hi : i < arr.size), arr[i] = ω ^ i) → -- Existing elements are correct
     val = ω ^ arr.size →                        -- Current val is the next power
     (getPowers_loop  ω (2 ^ n) arr val)[k]'(by rw [getPowers_loop_len ω arr val h_sz]; exact hk) = ω ^ k
     from this arr val (by simp [arr]) (by simp_all [arr]) (by simp [arr]; rfl)
-
   intro arr val h_sz h_arr_correct h_val_correct
-
   fun_induction getPowers_loop  ω (2 ^ n) arr val with
   | case1 arr val h ih =>
     unfold getPowers_loop
@@ -119,6 +148,7 @@ lemma getPowers_restrictEven {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers �
   simp only [Vector.restrictEven, getElem_getPowers, Vector.getElem_ofFn, Vector.get_eq_getElem]
   ring
 
+/-- Fast Number Theoretic Transform (FNTT) on Vectors -/
 def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPowers ω n)
   where fntt_aux {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
     (powers : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
@@ -136,11 +166,13 @@ def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPo
 
     (left ++ right).cast (Eq.symm (Nat.two_pow_succ n))
 
+/-- Inverse Fast Number Theoretic Transform (IFNTT) on Vectors -/
 def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
   (2 ^ n : ZMod p)⁻¹ • xs.fntt ω⁻¹
 
 variable {ω : ZMod p}
 
+/-- The FNTT coincides with the recursive NTT definition. -/
 lemma vector_fntt_eq_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.get = (xs.fntt ω).get  := by
   funext j
   unfold Vector.fntt
@@ -165,9 +197,14 @@ lemma vector_fntt_eq_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.
         rw [Nat.mod_eq_sub_mod (by omega)]
         apply Nat.mod_eq_of_lt (by omega)
 
+/-- Main Theorem: The FNTT on vectors correctly computes the NTT. -/
 theorem Vector.fntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get :=
   Eq.trans (vector_fntt_eq_ntt_rec xs h).symm (ntt_rec_eq_ntt h xs.get)
 
+/--
+The IFNTT computes the inverse NTT on vectors correctly.
+Follow directly from the correctness of the FNTT, since we defined the IFNTT in terms of the FNTT.
+ -/
 theorem Vector.ifntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.ifntt ω).get = intt ω xs.get := by
   rw [intt_as_ntt, Vector.ifntt]
   funext i
@@ -185,11 +222,13 @@ theorem Vector.getElem_ifntt {i : ℕ} (h : IsPrimitiveRoot ω (2 ^ n)) (hi : i 
   rw [← Vector.ifntt_correct xs h]
   rfl
 
+/-- The IFNTT is a left inverse of the FNTT. -/
 theorem Vector.ifntt_fntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) : (xs.fntt ω).ifntt ω = xs := by
   ext i hi
   rw [(xs.fntt ω).getElem_ifntt h hi, fntt_correct xs h, left_inv hp h]
   rfl
 
+/-- The FNTT is a right inverse of the IFNTT. -/
 theorem Vector.fntt_ifntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) : (xs.ifntt ω).fntt ω = xs := by
   ext i hi
   rw [(xs.ifntt ω).getElem_fntt h hi, ifntt_correct xs h, right_inv hp h]
@@ -197,6 +236,7 @@ theorem Vector.fntt_ifntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) 
 
 variable (ys : Vector (ZMod p) (2 ^ n))
 
+/-- Convolution theorem for the FNTT -/
 theorem Vector.fntt_convolution (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.convolution ys).fntt ω  = (xs.fntt ω).mul (ys.fntt ω) := by
   ext i hi
   unfold Vector.mul
@@ -204,6 +244,7 @@ theorem Vector.fntt_convolution (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.convoluti
   congr
   exact Vector.get_convolution xs ys
 
+/-- Convolution theorem for the IFNTT -/
 theorem Vector.convolution_ifntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) :
     (xs.ifntt ω).convolution (ys.ifntt ω) = (xs.mul ys).ifntt ω := by
   ext i hi
@@ -216,9 +257,11 @@ theorem Vector.convolution_ifntt (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 
   · exact ifntt_correct xs h
   · exact ifntt_correct ys h
 
+/-- Fast convolution by computing the FNTTs, multiplying pointwise, and then applying the IFNTT. -/
 def Vector.fastConvolution (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
   ((xs.fntt ω).mul (ys.fntt ω)).ifntt ω
 
+/-- Correctness of the fast convolution algorithm. -/
 theorem Vector.fastConvolution_correct (h : IsPrimitiveRoot ω (2 ^ n)) (hp : ¬p ∣ 2 ^ n) :
     (xs.fastConvolution ys ω) = xs.convolution ys := by
   simp_rw [Vector.fastConvolution, ← Vector.convolution_ifntt _ _ h hp, Vector.ifntt_fntt _ h hp]

@@ -9,11 +9,13 @@ def Vector.restrictEven (xs : Vector α (2 ^ (n + 1))) : Vector α (2 ^ n) :=
 def Vector.restrictOdd (xs : Vector α (2 ^ (n + 1))) : Vector α (2 ^ n) :=
   Vector.ofFn (fun i ↦ xs.get ⟨2 * i.val + 1, by omega⟩)
 
+/-- `Vector.restrictEven` is compatible with the version for tuples -/
 lemma restrictEven_of_vector {xs : Vector α (2 ^ (n + 1))} :
     restrictEven xs.get = xs.restrictEven.get := by
   funext j
   simp [restrictEven, Fin.double, Vector.restrictEven]
 
+/-- `Vector.restrictOdd` is compatible with the version for tuples -/
 lemma restrictOdd_of_vector {xs : Vector α (2 ^ (n + 1))} :
     restrictOdd xs.get = xs.restrictOdd.get := by
   funext j
@@ -23,6 +25,7 @@ lemma restrictOdd_of_vector {xs : Vector α (2 ^ (n + 1))} :
 
 namespace Vector
 
+/-- Ternary version of `Vector.zipWith`. -/
 def zipWith3 {α β γ δ : Type*} {n : ℕ} (f : α → β → γ → δ)
     (v1 : Vector α n) (v2 : Vector β n) (v3 : Vector γ n) : Vector δ n :=
   ⟨Array.zipWith3 f v1.toArray v2.toArray v3.toArray, by simp⟩

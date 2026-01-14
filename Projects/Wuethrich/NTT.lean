@@ -3,6 +3,30 @@ import Projects.Wuethrich.Aux
 import Projects.Wuethrich.PrimitiveRoots
 import Projects.Wuethrich.Convolution
 
+/-!
+# Number Theoretic Transform
+
+This file defines the Number Theoretic Transform (NTT) and its inverse (INTT) acting on tuples `Fin n → ZMod p`, where `p` is a prime number.
+
+## Main definitions
+
+* `ntt ω x`: The NTT of `x : Fin n → ZMod p` with respect to the primitive root of unity `ω`.
+* `intt ω x`: The inverse NTT of `x : Fin n → ZMod p` with respect to the primitive root of unity `ω`.
+
+## Main theorems
+
+* `left_inv`: The INTT is a left inverse of the NTT, provided that `p` does not divide `n`.
+* `right_inv`: The INTT is a right inverse of the NTT, provided that `p` does not divide `n`.
+* `ntt_add`: The NTT is additive.
+* `ntt_smul`: The NTT is compatible with scalar multiplication.
+* `ntt_shift`: Shift property of the NTT relating frequency shifts to modulation in the time domain.
+* `ntt_convolution`: The NTT transforms convolution into pointwise multiplication.
+* `intt_convolution`: The INTT of a convolution equals scaled pointwise product of INTTs.
+* `convolution_ntt`: The convolution of NTTs equals scaled NTT of pointwise product.
+* `convolution_intt`: The convolution of INTTs equals INTT of pointwise product.
+
+-/
+
 variable {n p : ℕ} [Fact p.Prime] (ω : ZMod p)
 
 def ntt : (Fin n → ZMod p) → (Fin n → ZMod p) :=

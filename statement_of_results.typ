@@ -97,6 +97,8 @@ In order to prove that this is indeed an inverse, we need to following theorem a
   $
 ]
 
+The proof of the other inversion direction, namely that $NTT(INTT(x)) = x$, is entirely analogous and follows the same steps as above.
+
 == Convolution Theorem
 
 For $n$-tuples of elements in $Zmod(p)$ we have the following notion of convolution:
