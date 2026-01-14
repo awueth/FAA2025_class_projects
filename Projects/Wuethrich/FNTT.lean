@@ -77,7 +77,7 @@ def getPowers (ω : ZMod p) (n : ℕ) : Vector (ZMod p) (2 ^ n) :=
   let initArray := Array.emptyWithCapacity (2 ^ n)
   ⟨getPowers_loop ω (2 ^ n) initArray 1, getPowers_loop_len ω initArray 1 (by simp [initArray])⟩
 
-theorem getPowers_getElem {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers ω n)[k] = ω ^ k := by
+theorem getElem_getPowers {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers ω n)[k] = ω ^ k := by
   unfold getPowers
   simp only [Vector.getElem_mk]
 
@@ -116,7 +116,7 @@ theorem getPowers_getElem {ω : ZMod p} {k : ℕ} (hk : k < 2 ^ n) : (getPowers 
 
 lemma getPowers_restrictEven {ω : ZMod p} : getPowers (ω ^ 2) n = (getPowers ω (n + 1)).restrictEven := by
   ext k hk
-  simp only [Vector.restrictEven, getPowers_getElem, Vector.getElem_ofFn, Vector.get_eq_getElem]
+  simp only [Vector.restrictEven, getElem_getPowers, Vector.getElem_ofFn, Vector.get_eq_getElem]
   ring
 
 def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPowers ω n)
@@ -126,15 +126,15 @@ def Vector.fntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPo
   | 0 => xs
   | n + 1 =>
     let powers' := powers.restrictEven
-    let ws := Vector.cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (Nat.le_add_right n 1))) (powers.extract 0 (2 ^ n))
+    let ws := (powers.extract 0 (2 ^ n)).cast (Nat.min_eq_left (Nat.pow_le_pow_of_le one_lt_two (n.le_add_right 1)))
 
     let y_even := fntt_aux xs.restrictEven (ω ^ 2) powers'
     let y_odd  := fntt_aux xs.restrictOdd (ω ^ 2) powers'
 
-    let left := Vector.zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws
-    let right := Vector.zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws
+    let left := zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws
+    let right := zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws
 
-    Vector.cast (Eq.symm (Nat.two_pow_succ n)) (left ++ right)
+    (left ++ right).cast (Eq.symm (Nat.two_pow_succ n))
 
 def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
   (2 ^ n : ZMod p)⁻¹ • xs.fntt ω⁻¹
@@ -152,10 +152,10 @@ lemma vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec 
     rw [@Vector.get_eq_getElem, restrictEven_of_vector, restrictOdd_of_vector, ih1 hω.of_pow_two, ih2 hω.of_pow_two]
     simp only [Fin.coe_cast, Vector.getElem_append, Vector.getElem_zipWith3, Vector.getElem_cast]
     split_ifs with h
-    · congr <;> simp [getPowers_restrictEven, Fin.natCast_eq_mk h, Vector.extract, getPowers_getElem]
+    · congr <;> simp [getPowers_restrictEven, Fin.natCast_eq_mk h, Vector.extract, getElem_getPowers]
     · rw [sub_eq_add_neg, neg_mul_eq_neg_mul, getPowers_restrictEven]
       congr; swap
-      · simp [Vector.extract, getPowers_getElem]
+      · simp [Vector.extract, getElem_getPowers]
         rw [neg_eq_neg_one_mul]
         nth_rw 1 [← Nat.sub_add_cancel (Nat.le_of_not_lt h), pow_add, mul_comm]
         congr
@@ -165,17 +165,17 @@ lemma vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec 
         rw [Nat.mod_eq_sub_mod (by omega)]
         apply Nat.mod_eq_of_lt (by omega)
 
-theorem Vector.fntt_correct (hω : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get := by
-  rw [← ntt_rec_eq_ntt hω]
-  exact (vector_fntt_eq_tuple_ntt_rec xs hω).symm
+theorem Vector.fntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get := by
+  rw [← ntt_rec_eq_ntt h]
+  exact (vector_fntt_eq_tuple_ntt_rec xs h).symm
 
-theorem Vector.ifntt_correct (hω : IsPrimitiveRoot ω (2 ^ n)) : (xs.ifntt ω).get = intt ω xs.get := by
+theorem Vector.ifntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.ifntt ω).get = intt ω xs.get := by
   rw [intt_as_ntt, Vector.ifntt]
   funext i
   simp only [get, Fin.coe_cast, getElem_toArray, getElem_smul, smul_eq_mul, Nat.cast_pow,
     Nat.cast_ofNat]
   congr
-  rw [← xs.fntt_correct hω.inv]
+  rw [← xs.fntt_correct h.inv]
   rfl
 
 theorem Vector.getElem_fntt {i : ℕ} (h : IsPrimitiveRoot ω (2 ^ n)) (hi : i < 2 ^ n) : (xs.fntt ω)[i]'hi = (ntt ω xs.get) ⟨i, hi⟩ := by

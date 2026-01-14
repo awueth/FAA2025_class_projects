@@ -229,4 +229,40 @@ The theory of primitvie roots is well developed in mathlib, the missing results 
 
 == FNTT on Vectors 
 
+In order to get an FFT algorithm that runs in $O(n log n)$ time, we need to work with an appropiate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. The implementation of the FNTT is in the file `FNTT.lean`. The main function is `Vector.fntt`, which implements the pseudocode given above:
+
+```lean
+def Vector.fntt {p : ℕ} [Fact (Nat.Prime p)] {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPowers ω n)
+  where fntt_aux {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
+    (powers : Vector (ZMod p) (2 ^ n)) : Vector (ZMod p) (2 ^ n) :=
+  match n with
+  | 0 => xs
+  | n + 1 =>
+    let powers' := powers.restrictEven -- [ω ^ 0, ω ^ 2, ω ^ 4, ...]
+    let ws := (powers.extract 0 (2 ^ n)).cast (...) -- [ω ^ 1, ω ^ 2, ..., ω ^ (2^n)]
+
+    let y_even := fntt_aux xs.restrictEven (ω ^ 2) powers'
+    let y_odd  := fntt_aux xs.restrictOdd (ω ^ 2) powers'
+
+    let left := zipWith3 (fun e o w ↦ e + w * o) y_even y_odd ws
+    let right := zipWith3 (fun e o w ↦ e - w * o) y_even y_odd ws
+
+    (left ++ right).cast (Eq.symm (Nat.two_pow_succ n))
+```
+
+The function `getPowers` is a helper function that precomputes the powers of $ω$ needed in the algorithm to avoid recomputing them multiple times, it computes the vector $(ω^0, ω^1, ω^2, ..., ω^(2^n - 1))$, iteratively in $O(2^n)$ time.
+
+== Correctness of the FNTT
+
+We consider the function `Vector.fntt` to be correct if it commutes with the function `Vector.get` which converts a `Vector` to a function from `Fin n`, that is if
+
+```lean
+theorem Vector.fntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : 
+    (xs.fntt ω).get = ntt ω xs.get
+```
+for any `xs : Vector (ZMod p) (2 ^ n)`. 
+
+We do not prove this result directly, but rather we introduce a recursive definition of the NTT on functions `Fin n → Zmod p`, called `ntt_rec`. This function does not run in $O(n log n)$ time, since it only computes the NTT recursively pointwise without reusing any computations. However, its definition mirrors the structure of the FNTT algorithm closely enough that we can prove the following two theorems by induction on `n`.
+
+
 == Running time analysis
