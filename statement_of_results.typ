@@ -148,7 +148,7 @@ A similar result holds for the inverse NTT:
 
 Computing the NTT naively using the definition requires $O(n^2)$ operations in $Zmod(p)$. However, just like the DFT, the NTT can be computed in $O(n log n)$ time using a divide-and-conquer approach.
 
-The existsence of such an algorithm follows almost immediately from the following decomposition of the $NTT$: Let $x$ be a vector in $(Zmod(p))^n$ where $n$ is even and let $omega$ be a primitive $N$-th root of unity in $Zmod(p)$, for any $k = 0, ..., n-1$ we have
+The existence of such an algorithm follows almost immediately from the following decomposition of the $NTT$: Let $x$ be a vector in $(Zmod(p))^n$ where $n$ is even and let $omega$ be a primitive $N$-th root of unity in $Zmod(p)$, for any $k = 0, ..., n-1$ we have
 
 $
   (NTT(x))_k = sum_(j=0)^(n-1) x_j omega^(j k) 
@@ -221,15 +221,15 @@ theorem right_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMo
 
 The main ingredient used in the proofs of these theorems is the orthogonality of roots of unity @orthogonality, which is we formalized in the file `PrimitiveRoots.lean` and is called `IsPrimitiveRoot.sum_zpow_mul_eq`. 
 
-The section `convolution` contains the fornalizations of the convolution theorems. The circular convolution was not defined in mathlib, so we defined it ourselves as `convolution` in the file `Convolution.lean`. The theorems `ntt_convolution` and `intt_convolution` as well as `convolution_ntt` and `convolution_intt` formalize the convolution theorems.
+The section `convolution` contains the formalizations of the convolution theorems. The circular convolution was not defined in mathlib, so we defined it ourselves as `convolution` in the file `Convolution.lean`. The theorems `ntt_convolution` and `intt_convolution` as well as `convolution_ntt` and `convolution_intt` formalize the convolution theorems.
 
 == Primitive roots of unity
 
-The theory of primitvie roots is well developed in mathlib, the missing results we need are in the file `PrimitiveRoots.lean`. This file contains the fact that if `ω` is a primitive `n`-th root of unity in `Zmod(p)`, then $omega ^ 2$ is a primitive `n/2`-th root of unity, as well as @orthogonality
+The theory of primitive roots is well developed in mathlib, the missing results we need are in the file `PrimitiveRoots.lean`. This file contains the fact that if `ω` is a primitive `n`-th root of unity in `Zmod(p)`, then $omega ^ 2$ is a primitive `n/2`-th root of unity, as well as @orthogonality
 
 == FNTT on Vectors 
 
-In order to get an FFT algorithm that runs in $O(n log n)$ time, we need to work with an appropiate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. 
+In order to get an FFT algorithm that runs in $O(n log n)$ time, we need to work with an appropriate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. 
 The implementation of the FNTT is in the file `FNTT.lean`. The main function is `Vector.fntt`, which implements the pseudocode given above:
 
 ```lean
@@ -342,4 +342,26 @@ In the file `ComputationModel.lean` we wrap the basic vector operations in the t
   caption: [Assumed costs for primitive vector operations in `TimeM`],
 )
 
-Under these assumptions, we can prove that the running time of `Vector.fnttT` is $(4 n + 1) 2 ^ n$, as shown in `Vector.fnttT_time`. The $+1$ term in the cost factor corresponds to the cost introduced by the computation of `getPowers`, as proven in `getPowersT_time`. The factor $4$ could be improved by avoiding copyiyng arrays unnecessarily, e.g. in `restrictEvenT` and `restrictOddT` and using views instead, howver this cannot be done using the `Vector` tyepe and we would have to resort to raw arrays.
+Under these assumptions, we can prove that the running time of `Vector.fnttT` is $(4 n + 1) 2 ^ n$, as shown in `Vector.fnttT_time`. The $+1$ term in the cost factor corresponds to the cost introduced by the computation of `getPowers`, as proven in `getPowersT_time`. The factor $4$ could be improved by avoiding copying arrays unnecessarily, e.g. in `restrictEvenT` and `restrictOddT` and using views instead, however this cannot be done using the `Vector` type and we would have to resort to raw arrays.
+
+Finally, we analyze the complexity of the full convolution algorithm:
+
+#theorem[
+  The running time of `Vector.fastConvolutionT` for vectors of size $2^n$ is $(12n + 4)2^n$.
+]
+#proof[
+  The fast convolution involves:
+  - Two forward FNTTs: $2 dot (4n + 1)2^n$.
+  - One pointwise multiplication: $2^n$.
+  - One inverse FNTT (same cost as forward): $(4n + 1)2^n$.
+  
+  Summing these gives $3(4n + 1)2^n + 2^n = (12n + 3)2^n + 2^n = (12n + 4)2^n$. This confirms the $O(N log N)$ complexity where $N = 2^n$.
+]
+
+= Conclusion
+
+In this project, we successfully formalized the Number-Theoretic Transform and the Fast Number-Theoretic Transform algorithm in Lean 4. We proved the correctness of the algorithms and verified their asymptotic running time. By working over $Zmod(p)$, all our definitions are executable, allowing us to run the algorithms on concrete examples as shown in `Examples.lean`.
+
+One limitation of our formalization is the use of the `Vector` type, which ensures length safety but often requires copying data when performing split operations like restrictEven or extract. As noted in the running time analysis, this introduces a constant factor overhead (the factor of 4 in the FNTT cost). Using Array views or indices directly could eliminate this overhead, but would significantly complicate the formalization of correctness and length invariants.
+
+Despite this, the asymptotic complexity of $O(N log N)$ (where $N=2^n$) is preserved, demonstrating the efficiency of the formalized algorithm.
