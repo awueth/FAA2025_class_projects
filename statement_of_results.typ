@@ -18,7 +18,7 @@
 #let proof = thmproof("proof", "Proof")
 
 
-#title[Number-Theoretic Transform in Lean 4]
+#title[Number-Theoretic Transform in Lean]
 
 #let Zmod(p) = $ZZ \/ #p ZZ$
 #let NTT = $op("NTT")$
@@ -229,7 +229,8 @@ The theory of primitvie roots is well developed in mathlib, the missing results 
 
 == FNTT on Vectors 
 
-In order to get an FFT algorithm that runs in $O(n log n)$ time, we need to work with an appropiate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. The implementation of the FNTT is in the file `FNTT.lean`. The main function is `Vector.fntt`, which implements the pseudocode given above:
+In order to get an FFT algorithm that runs in $O(n log n)$ time, we need to work with an appropiate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. 
+The implementation of the FNTT is in the file `FNTT.lean`. The main function is `Vector.fntt`, which implements the pseudocode given above:
 
 ```lean
 def Vector.fntt {p : ℕ} [Fact (Nat.Prime p)] {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPowers ω n)
@@ -254,15 +255,91 @@ The function `getPowers` is a helper function that precomputes the powers of $ω
 
 == Correctness of the FNTT
 
-We consider the function `Vector.fntt` to be correct if it commutes with the function `Vector.get` which converts a `Vector` to a function from `Fin n`, that is if
+We consider the function `Vector.fntt` to be correct if it commutes with the function `Vector.get` which converts a `Vector` to a function from `Fin n`, that is if `(xs.fntt ω).get = ntt ω xs.get`
+for any `xs : Vector (ZMod p) (2 ^ n)`. 
+
+We do not prove this result directly, but rather we introduce a recursive definition of the NTT on functions `Fin (2 ^ n) → Zmod p`, called `ntt_rec`. 
+
+```lean
+def ntt_rec (ω : ZMod p) (x : Fin (2 ^ n) → ZMod p) (k : Fin (2 ^ n)) : ZMod p :=
+  match n with
+  | 0 => x k
+  | n + 1 =>
+    let k' := Fin.ofNat (2 ^ n) k
+    let y_even := ntt_rec (ω ^ 2) (restrictEven x) k'
+    let y_odd  := ntt_rec (ω ^ 2) (restrictOdd x)  k'
+
+    y_even + (ω ^ (k : ℕ)) * y_odd
+
+```
+This function does not compute the NTT in $O(n 2 ^ n)$ time, since it only computes the NTT recursively pointwise without reusing any computations. However, its definition mirrors the structure of the FNTT algorithm closely enough that we can prove the following two theorems by induction on `n`.
+
+```lean
+theorem ntt_rec_eq_ntt (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMod p) :
+  ntt_rec ω x = ntt ω x 
+
+lemma vector_fntt_eq_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : 
+  ntt_rec ω xs.get = (xs.fntt ω).get
+```
+
+The actual correctness theorem of the FNTT the follows immediately and only requires one line of proof:
 
 ```lean
 theorem Vector.fntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : 
-    (xs.fntt ω).get = ntt ω xs.get
+    (xs.fntt ω).get = ntt ω xs.get :=
+  Eq.trans (vector_fntt_eq_ntt_rec xs h).symm (ntt_rec_eq_ntt h xs.get)
 ```
-for any `xs : Vector (ZMod p) (2 ^ n)`. 
 
-We do not prove this result directly, but rather we introduce a recursive definition of the NTT on functions `Fin n → Zmod p`, called `ntt_rec`. This function does not run in $O(n log n)$ time, since it only computes the NTT recursively pointwise without reusing any computations. However, its definition mirrors the structure of the FNTT algorithm closely enough that we can prove the following two theorems by induction on `n`.
+
+
 
 
 == Running time analysis
+
+The running time analysis is located in the file `RunningTime.lean`, it includes a copy of the FNTT algorithm called `Vector.fnttT` which follows the definition of `Vector.fntt` closely, but uses the time monad from class. 
+
+```lean
+def Vector.fnttT (ω : ZMod p) : TimeM (Vector (ZMod p) (2 ^ n)) := do
+  let powers ← getPowersT ω n
+  fntt_auxT xs ω powers
+  where fntt_auxT {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p)
+    (powers : Vector (ZMod p) (2 ^ n)) : TimeM (Vector (ZMod p) (2 ^ n)) :=
+  match n with
+  | 0 => return xs
+  | n + 1 => do
+    let powers' ← powers.restrictEvenT
+
+    let ws ← (powers.extractT 0 (2 ^ n)) >>= castT ...
+
+    let xs_even ← xs.restrictEvenT
+    let xs_odd ← xs.restrictOddT
+
+    let y_even ← fntt_auxT xs_even (ω ^ 2) powers'
+    let y_odd  ← fntt_auxT xs_odd (ω ^ 2) powers'
+
+    let left ← zipWith3T (fun e o w ↦ e + w * o) y_even y_odd ws
+    let right ← zipWith3T (fun e o w ↦ e - w * o) y_even y_odd ws
+
+    appendT left right >>= Vector.castT (Eq.symm (Nat.two_pow_succ n))
+```
+
+In the file `ComputationModel.lean` we wrap the basic vector operations in the time monad. For most vector operations operating on vectors of length $n$, we assume a running time of $n$. The exception is `Vector.castT` which represents a type-level cast and is assumed to be free.
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 10pt,
+    align: left,
+    [*Function*], [*Description*], [*Cost*],
+    [`Vector.castT`], [Cast vector length given equality proof], [Free],
+    [`Vector.extractT`], [Extract a sub-vector, copies the array], [$O(n)$],
+    [`Vector.appendT`], [Concatenate two vectors#footnote[Running time as per the Lean Reference Manual: #link("https://lean-lang.org/doc/reference/latest/Basic-Types/Arrays/#Array___append")]], [$O(n)$],
+    [`Vector.restrictEvenT`], [Collect elements at even indices, copies the array], [$O(n)$],
+    [`Vector.restrictOddT`], [Collect elements at odd indices, copies the array], [$O(n)$],
+    [`Vector.zipWith3T`], [Apply function to 3 vectors pointwise], [$O(n)$],
+    [`Vector.mulT`], [Pointwise multiplication of two vectors], [$O(n)$],
+  ),
+  caption: [Assumed costs for primitive vector operations in `TimeM`],
+)
+
+Under these assumptions, we can prove that the running time of `Vector.fnttT` is $(4 n + 1) 2 ^ n$, as shown in `Vector.fnttT_time`. The $+1$ term in the cost factor corresponds to the cost introduced by the computation of `getPowers`, as proven in `getPowersT_time`. The factor $4$ could be improved by avoiding copyiyng arrays unnecessarily, e.g. in `restrictEvenT` and `restrictOddT` and using views instead, howver this cannot be done using the `Vector` tyepe and we would have to resort to raw arrays.

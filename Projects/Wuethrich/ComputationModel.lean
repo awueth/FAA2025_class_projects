@@ -52,10 +52,8 @@ end TimeM
 
 variable {m n : ℕ} {α : Type}
 
--- Does not copy the underlying array
 def Vector.castT (h : n = m) (xs : Vector α n) : TimeM (Vector α m) := ⟨xs.cast h, 0⟩
 
--- Does copy the underlying array
 def Vector.extractT  (xs : Vector α n) (start : Nat := 0) (stop : Nat := n) :
     TimeM (Vector α (min stop n - start)) :=
   ⟨xs.extract start stop, n⟩

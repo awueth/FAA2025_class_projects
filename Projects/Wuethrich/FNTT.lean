@@ -141,7 +141,7 @@ def Vector.ifntt (ω : ZMod p) : Vector (ZMod p) (2 ^ n) :=
 
 variable {ω : ZMod p}
 
-lemma vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.get = (xs.fntt ω).get  := by
+lemma vector_fntt_eq_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec ω xs.get = (xs.fntt ω).get  := by
   funext j
   unfold Vector.fntt
   let powers := (Vector.finRange (2 ^ n)).map (fun i ↦ ω ^ i.val)
@@ -165,9 +165,8 @@ lemma vector_fntt_eq_tuple_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : ntt_rec 
         rw [Nat.mod_eq_sub_mod (by omega)]
         apply Nat.mod_eq_of_lt (by omega)
 
-theorem Vector.fntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get := by
-  rw [← ntt_rec_eq_ntt h]
-  exact (vector_fntt_eq_tuple_ntt_rec xs h).symm
+theorem Vector.fntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.fntt ω).get = ntt ω xs.get :=
+  Eq.trans (vector_fntt_eq_ntt_rec xs h).symm (ntt_rec_eq_ntt h xs.get)
 
 theorem Vector.ifntt_correct (h : IsPrimitiveRoot ω (2 ^ n)) : (xs.ifntt ω).get = intt ω xs.get := by
   rw [intt_as_ntt, Vector.ifntt]

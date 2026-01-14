@@ -1,1 +1,0 @@
-Describe the main challenges, one design decision you would reconsider, and what you learned about formalization.
