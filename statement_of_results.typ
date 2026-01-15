@@ -225,7 +225,7 @@ Defining tuples as functions from `Fin n` is the standard way to represent fixed
   align: left,
   [*Theorem names*], [*Description*],
   [`intt_as_ntt`], [The INTT is an NTT with the inverse root of unity, scaled by $n^(-1)$.],
-  [`ntt_add`, `ntt_smul`], [Linarity of the NTT],
+  [`ntt_add`, `ntt_smul`], [Linearity of the NTT],
   [`intt_add`, `intt_smul`], [Linearity of the inverse transform],
   [`ntt_shift`], [Frequency shifting property, $(NTT_omega (x))_(i - j) = (NTT_omega (omega^(-j k) x_k))_i$],
   [`left_inv`, `right_inv`], [INTT is the inverse of the NTT assuming `p` does not divide `n` and `ω` is a primitive `n`-th root of unity],
