@@ -55,7 +55,7 @@ Just like the DFT, the NTT is invertible:
   $
 ]
 
-In order to prove that this is indeed an inverse, we need to following theorem about primitive roots:
+In order to prove that this is indeed an inverse, we need the following theorem about primitive roots:
 
 #theorem[`sum_zpow_mul_eq` in `PrimitiveRoots.lean`][
   Let $omega in Zmod(p)$ be a primitive $n$-th root of unity, then for any $m in ZZ$ it holds that
