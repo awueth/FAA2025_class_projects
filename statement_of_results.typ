@@ -155,7 +155,7 @@ Furthermore, for any $x, y$ we have that
 
 Computing the NTT naively using the definition requires $O(n^2)$ operations in $Zmod(p)$. However, just like the DFT, the NTT can be computed in $O(n log n)$ time using a divide-and-conquer approach.
 
-The existence of such an algorithm follows almost immediately from the following decomposition of the $NTT$: Let $x$ be a vector in $(Zmod(p))^n$ where $n$ is even and let $omega$ be a primitive $N$-th root of unity in $Zmod(p)$, for any $k = 0, ..., n-1$ we have
+The existence of such an algorithm follows almost immediately from the following decomposition of the $NTT$: Let $x$ be a vector in $(Zmod(p))^n$ where $n$ is even and let $omega$ be a primitive $n$-th root of unity in $Zmod(p)$, for any $k = 0, ..., n-1$ we have
 
 $
   (NTT(x))_k = sum_(j=0)^(n-1) x_j omega^(j k) 
