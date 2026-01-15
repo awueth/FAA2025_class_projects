@@ -291,7 +291,7 @@ lemma vector_fntt_eq_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) :
   ntt_rec ω xs.get = (xs.fntt ω).get
 ```
 
-The main ingredient for proving the recursive NTT coincides with the standard NTT definition is the decomposition of the NTT into even and odd parts, which is follows from equivalence `finTwoPowSuccEquiv : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n + 1))` in the file `Aux.lean`.
+The main ingredient for proving the recursive NTT coincides with the standard NTT definition is the decomposition of the NTT into even and odd parts, which follows from equivalence `finTwoPowSuccEquiv : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n + 1))` in the file `Aux.lean`.
 
 To prove the vector FNTT coincides with the recursive NTT, the key is to show that the helper functions `restrictEven` and `restrictOdd` on functions correspond to the vector operations `Vector.restrictEven` and `Vector.restrictOdd`, respectively. This is done in the lemmas `restrictEven_of_vector` and `restrictOdd_of_vector` in the file `Vector.lean`.
 
