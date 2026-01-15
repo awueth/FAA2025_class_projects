@@ -183,7 +183,7 @@ Assuming that $n = 2 ^ l$ for some $l in NN$ and keeping in mind that $omega^(k 
   pseudocode-list[
     + *function* $FNTT(omega, x)$
       + *match* $l$ *with*
-        + $l -> x$
+        + $0 -> x$
         + $l + 1 ->$
           + $x^"even" <- (x_0, x_2, ..., x_(2^l-2)), quad x^"odd" <- (x_1, x_3, ..., x_(2^l-1))$
           +
