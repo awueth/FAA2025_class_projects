@@ -29,13 +29,13 @@
 
 The discrete Fourier transform (DFT) of a function taking values in the complex numbers can be generalized to functions taking values in an arbitrary ring $R$. If we specialize the discrete Fourier transform over a ring to $R = Zmod(p)$, the integers modulo a prime $p$, we obtain what is called the number-theoretic Transform (NTT).
 
-The fast Fourier transform algorithm (FFT), used to compute the discrete fourier transform of an $n$-tuple in $O(n log n)$ time, can also be applied to the number-theoretic transform. This project is a formalization of both the number-theoretic transform and the fast algorithm to compute it. The advantage of working in $Zmod(p)$ instead of $CC$, is that all computations can be carried out exactly, making all of our formalization computable.
+The fast Fourier transform algorithm (FFT), used to compute the discrete Fourier transform of an $n$-tuple in $O(n log n)$ time, can also be applied to the number-theoretic transform. This project is a formalization of both the number-theoretic transform and the fast algorithm to compute it. The advantage of working in $Zmod(p)$ instead of $CC$, is that all computations can be carried out exactly, making all of our formalization computable.
 
 = Theory and definitions
 
 Let $x = (x_0, ..., x_(n-1))$ be an $n$-tuple of elements of $Zmod(p)$ where $p$ is prime. The NTT of $x$ is obtained by replacing the factors $e^(- i 2 pi / n)$ in the definition of the complex DFT by a _primitive $n$-th root of unity_ $omega in Zmod(p)$:
 
-#definition[
+#definition[`ntt` in `NTT.lean`][
   The number-theoretic Transform (NTT) maps $x$ to another $n$-tuple $y = (y_0, ..., y_(n-1))$ of elements in  $Zmod(p)$ defined by
   $
     NTT(x)_k := sum_(j=0)^(n-1) x_j omega^(j k). 
@@ -48,7 +48,7 @@ Let $x = (x_0, ..., x_(n-1))$ be an $n$-tuple of elements of $Zmod(p)$ where $p$
 
 Just like the DFT, the NTT is invertible:
 
-#definition[
+#definition[`intt` in `NTT.lean`][
   The inverse number-theoretic Transform (INTT) maps $y = (y_0, ..., y_(n-1))$ back to the $n$-tuple
   $
     NTT(y)_k := n^(-1) sum_(j=0)^(n-1) y_j omega^(-j k).
@@ -57,7 +57,7 @@ Just like the DFT, the NTT is invertible:
 
 In order to prove that this is indeed an inverse, we need to following theorem about primitive roots:
 
-#theorem[
+#theorem[`sum_zpow_mul_eq` in `PrimitiveRoots.lean`][
   Let $omega in Zmod(p)$ be a primitive $n$-th root of unity, then for any $m in ZZ$ it holds that
   $
     ∑_(k=0)^(n-1) ω ^ (k  m) =
@@ -80,11 +80,11 @@ In order to prove that this is indeed an inverse, we need to following theorem a
   $
 ]
 
-#theorem[
+#theorem[`left_inv` in `NTT.lean`][
   Let $n, p in NN$ and $p$ be prime. If $p divides.not n$, then for any $n$-tuple $x = (x_0, ..., x_(n-1))$ of elements in $Zmod(p)$ we have that $INTT(NTT(x)) = x$.
 ]
 #proof[
-  Since $p$ does not divide $n$, $n$ i non-zero in $Zmod(p)$ and hence its inverse $n^(-1)$ is well defined.
+  Since $p$ does not divide $n$, $n$ is non-zero in $Zmod(p)$ and hence its inverse $n^(-1)$ is well defined.
   $
     INTT(NTT(x))_j
     &= n^(-1) sum_(k=0)^(n-1) (sum_(l=0)^(n-1) x_l omega^(l k)) omega^(-j k) \
@@ -95,6 +95,7 @@ In order to prove that this is indeed an inverse, we need to following theorem a
     &= n^(-1) sum_(l=0)^(n-1) x_l n \
     &= x_j,
   $
+  by @orthogonality.
 ]
 
 The proof of the other inversion direction, namely that $NTT(INTT(x)) = x$, is entirely analogous and follows the same steps as above.
@@ -103,20 +104,21 @@ The proof of the other inversion direction, namely that $NTT(INTT(x)) = x$, is e
 
 For $n$-tuples of elements in $Zmod(p)$ we have the following notion of convolution:
 
-#definition[Circular Convolution][
-  Let $x = (x_0, ..., x_(n-1))$ and $y = (y_0, ..., y_(n-1))$ be $n$-tuples of elements in $Zmod(p)$
+#definition[`convolution` in `Convolution.lean`][
+  Let $x = (x_0, ..., x_(n-1))$ and $y = (y_0, ..., y_(n-1))$ be $n$-tuples of elements in $Zmod(p)$, the _circular convolution_ of $x$ and $y$ is the $n$-tuple defined by
   $
-    (x star y)_k = sum_(j=0)^(n-1) x_j y_((k - j) mod n)
+    (x star y)_k = sum_(j=0)^(n-1) x_j y_((k - j) mod n).
   $
 ]
 
 The convolution theorem states that the convolution in the time domain corresponds to pointwise multiplication in the frequency domain:
 
-#theorem[
+#theorem[`ntt_convolution` in `NTT.lean`][
   Let $omega$ be a primitive $n$-th root of unity in $Zmod(p)$, then
   $
-    INTT(x star y) = n dot NTT(x) dot NTT(y).
+    NTT(x star y) = NTT(x) dot NTT(y),
   $
+  where $dot$ denotes the pointwise multiplication of two $n$-tuples.
 ]
 #proof[
   Let $z = x star y$. By the definition of the NTT and the cyclic convolution we have
@@ -135,16 +137,19 @@ The convolution theorem states that the convolution in the time domain correspon
 
 A similar result holds for the inverse NTT:
 
-#theorem[
+#theorem[`intt_convolution` in `NTT.lean`][
   Let $omega$ be a primitive $n$-th root of unity in $Zmod(p)$, then
   $
-    NTT(x star y) = NTT(x) dot NTT(y),
+    INTT(x star y) = n dot NTT(x) dot NTT(y).
   $
-  where $dot$ denotes the pointwise multiplication of two $n$-tuples.
 ]
 #proof[
   This follows directly from the fact that if $omega$ is a primitive $n$-th root of unity, then so is $omega^(-1)$, and the previous theorem.
 ]
+
+Furthermore, for any $x, y$ we have that 
+- $NTT(x) star NTT(y) = n dot NTT(x dot y)$, see `convolution_ntt` in `NTT.lean`, and
+- $INTT(x) star INTT(y) = NTT(x dot y)$, see `convolution_intt` in `NTT.lean`.
 
 = Fast Algorithms
 
@@ -174,7 +179,8 @@ where $x^"even" = (x_0, x_2, ..., x_(n-2))$ and $x^"odd" = (x_1, x_3, ..., x_(n-
 
 Assuming that $n = 2 ^ l$ for some $l in NN$ and keeping in mind that $omega^(k + n/2) = -omega^k$ we obtain the following recursive algorithm for computing the NTT, called the Fast Number-Theoretic Transform (FNTT):
 
-#pseudocode-list[
+#figure(
+  pseudocode-list[
     + *function* $FNTT(omega, x)$
       + *match* $l$ *with*
         + $l -> x$
@@ -186,7 +192,11 @@ Assuming that $n = 2 ^ l$ for some $l in NN$ and keeping in mind that $omega^(k 
           + *for* $k = 0 ..., 2^l - 1$ *do*
             + $y_k <- y^"even"_k + omega^k dot y^"odd"_k, quad y_(k + 2^l) <- y^"even"_k - omega^k dot y^"odd"_k$
           + *return* $y$
-  ]
+    ], 
+  caption: [Pseudocode for the Fast Number-Theoretic Transform (FNTT) of a vector of length $n=2^l$.]
+)<fntt-pseudocode>
+
+The above algorithm runs in $O(n log n)$ time, as each level of recursion requires $O(2^l)$ operations to combine the two half-length NTTs, and there are $l = log_2(n)$ levels of recursion.
 
 = Formalization in Lean
 
@@ -209,21 +219,18 @@ def intt (ω : ZMod p) (x : Fin n → ZMod p) : (Fin n → ZMod p) :=
 ```
 Defining tuples as functions from `Fin n` is the standard way to represent fixed-length tuples in mathlib, this allow us to us to invoke various lemmas about `Fin n` and sums over `Fin n` from mathlib. 
 
-The theorems `ntt_add` and `ntt_smul` show that the NTT is linear. The theorems `left_inv` and `right_inv` show that NTT and INTT are inverses when `p` does not divide `n`, for this we do assume that `ω` is a primitive `n`-th root of unity:
-
-```lean
-variable {ω : ZMod p}
-
-theorem left_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
-    intt ω (ntt ω x) = x
-
-theorem right_inv (hp : ¬p ∣ n) (h : IsPrimitiveRoot ω n) (x : Fin n → ZMod p) :
-    ntt ω (intt ω x) = x
-```
-
-The main ingredient used in the proofs of these theorems is the orthogonality of roots of unity @orthogonality, which is we formalized in the file `PrimitiveRoots.lean` and is called `IsPrimitiveRoot.sum_zpow_mul_eq`. 
-
-The section `convolution` contains the formalizations of the convolution theorems. The circular convolution was not defined in mathlib, so we defined it ourselves as `convolution` in the file `Convolution.lean`. The theorems `ntt_convolution` and `intt_convolution` as well as `convolution_ntt` and `convolution_intt` formalize the convolution theorems.
+#table(
+  columns: (1fr, 3fr),
+  inset: 8pt,
+  align: left,
+  [*Theorem names*], [*Description*],
+  [`intt_as_ntt`], [The INTT is an NTT with the inverse root of unity, scaled by $n^(-1)$.],
+  [`ntt_add`, `ntt_smul`], [Linarity of the NTT],
+  [`intt_add`, `intt_smul`], [Linearity of the inverse transform],
+  [`ntt_shift`], [Frequency shifting property, $(NTT_omega (x))_(i - j) = (NTT_omega (omega^(-j k) x_k))_i$],
+  [`left_inv`, `right_inv`], [INTT is the inverse of the NTT assuming `p` does not divide `n` and `ω` is a primitive `n`-th root of unity],
+  [`(i)ntt_convolution`, `convolution_(i)ntt`], [Convolution theorems relating NTT/INTT of convolutions to pointwise multiplications.],
+)
 
 == Primitive roots of unity
 
@@ -231,8 +238,8 @@ The theory of primitive roots is well developed in mathlib, the missing results 
 
 == FNTT on Vectors 
 
-In order to get an FFT algorithm that runs in $O(n log n)$ time, we need to work with an appropriate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. 
-The implementation of the FNTT is in the file `FNTT.lean`. The main function is `Vector.fntt`, which implements the pseudocode given above:
+In order to get an FFT algorithm that runs in $O(N log N)$ time, where $N = 2^n$, we need to work with an appropriate data structure, which allows us to reuse computations. We chose to work with `Vector` which is a wrapper around fixed-length arrays in Lean. 
+The implementation of the FNTT is in the file `FNTT.lean`. The main function is `Vector.fntt`, which implements the pseudocode given in @fntt-pseudocode:
 
 ```lean
 def Vector.fntt {p : ℕ} [Fact (Nat.Prime p)] {n : ℕ} (xs : Vector (ZMod p) (2 ^ n)) (ω : ZMod p) : Vector (ZMod p) (2 ^ n) := fntt_aux xs ω (getPowers ω n)
@@ -283,6 +290,10 @@ theorem ntt_rec_eq_ntt (h : IsPrimitiveRoot ω (2 ^ n)) (x : Fin (2 ^ n) → ZMo
 lemma vector_fntt_eq_ntt_rec (hω : IsPrimitiveRoot ω (2 ^ n)) : 
   ntt_rec ω xs.get = (xs.fntt ω).get
 ```
+
+The main ingredient for proving the recursive NTT coincides with the standard NTT definition is the decomposition of the NTT into even and odd parts, which is follows from equivalence `finTwoPowSuccEquiv : Fin (2 ^ n) ⊕ Fin (2 ^ n) ≃ Fin (2 ^ (n + 1))` in the file `Aux.lean`.
+
+To prove the vector FNTT coincides with the recursive NTT, the key is to show that the helper functions `restrictEven` and `restrictOdd` on functions correspond to the vector operations `Vector.restrictEven` and `Vector.restrictOdd`, respectively. This is done in the lemmas `restrictEven_of_vector` and `restrictOdd_of_vector` in the file `Vector.lean`.
 
 The actual correctness theorem of the FNTT the follows immediately and only requires one line of proof:
 
