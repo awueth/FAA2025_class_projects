@@ -27,7 +27,7 @@
 
 = Introduction
 
-The discrete Fourier transform (DFT) of a function taking values in the complex numbers can be generalized to functions taking values in an arbitrary ring $R$. If we specialize the discrete Fourier transform over a ring to $R = Zmod(p)$, the integers modulo a prime $p$, we obtain what is called the number-theoretic Transform (NTT).
+The discrete Fourier transform (DFT) of a function taking values in the complex numbers can be generalized to functions taking values in an arbitrary ring $R$. If we specialize the discrete Fourier transform over a ring to $R = Zmod(p)$, the integers modulo a prime $p$, we obtain what is called the number-theoretic transform (NTT).
 
 The fast Fourier transform algorithm (FFT), used to compute the discrete Fourier transform of an $n$-tuple in $O(n log n)$ time, can also be applied to the number-theoretic transform. This project is a formalization of both the number-theoretic transform and the fast algorithm to compute it. The advantage of working in $Zmod(p)$ instead of $CC$, is that all computations can be carried out exactly, making all of our formalization computable.
 
