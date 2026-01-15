@@ -162,7 +162,7 @@ $
   = sum_(j=0)^(n\/2-1) x_(2j) (omega^2)^(j k) + omega^k sum_(j=0)^(n\/2-1) x_(2j+1) (omega^2)^(j k).
 $
 
-The right-hand side of the above equation resembles two NTTs of length $n/2$: one for the even-indexed elements of $x$ and one for the odd-indexed elements, using $ω$ as the root of unity. It is easy to verify that if $ω$ is a primitive $n$-th root of unity, then $ω^2$ is a primitive $(n/2)$-th root of unity.
+The right-hand side of the above equation resembles two NTTs of length $n/2$: one for the even-indexed elements of $x$ and one for the odd-indexed elements, using $ω^2$ as the root of unity. It is easy to verify that if $ω$ is a primitive $n$-th root of unity, then $ω^2$ is a primitive $(n/2)$-th root of unity.
 
 A small caveat is that the index $k$ in the original problem ranges from 0 to $n-1$, while the sub-NTTs on the right-hand side produce vectors defined only for indices from 0 to $n/2-1$. However, we can resolve this by observing that the sub-problems are periodic with period $n/2$
 $
