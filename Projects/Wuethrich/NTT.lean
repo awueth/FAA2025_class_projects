@@ -32,6 +32,7 @@ variable {n p : ℕ} [Fact p.Prime] (ω : ZMod p)
 def ntt : (Fin n → ZMod p) → (Fin n → ZMod p) :=
   fun x k ↦ ∑ j, x j * ω ^ ((j * k) : ℤ)
 
+/-- Auxiliary inverse NTT that omits the normalization factor `(n : ZMod p)⁻¹`. -/
 def intt_aux : (Fin n → ZMod p) → (Fin n → ZMod p) :=
   fun x k ↦ ∑ j, x j * ω ^ (-(j * k : ℤ))
 
