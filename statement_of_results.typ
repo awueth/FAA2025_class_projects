@@ -27,7 +27,7 @@
 
 = Introduction
 
-The discrete Fourier transform (DFT) of a function taking values in the complex numbers can be generalized to functions taking values in an arbitrary ring $R$. If we specialize the discrete Fourier transform over a ring to $R = Zmod(p)$, the integers modulo a prime $p$, we obtain what is called the number-theoretic Transform (NTT).
+The discrete Fourier transform (DFT) of a function taking values in the complex numbers can be generalized to functions taking values in an arbitrary ring $R$. If we specialize the discrete Fourier transform over a ring to $R = Zmod(p)$, the integers modulo a prime $p$, we obtain what is called the number-theoretic transform (NTT).
 
 The fast Fourier transform algorithm (FFT), used to compute the discrete Fourier transform of an $n$-tuple in $O(n log n)$ time, can also be applied to the number-theoretic transform. This project is a formalization of both the number-theoretic transform and the fast algorithm to compute it. The advantage of working in $Zmod(p)$ instead of $CC$, is that all computations can be carried out exactly, making all of our formalization computable.
 
@@ -36,7 +36,7 @@ The fast Fourier transform algorithm (FFT), used to compute the discrete Fourier
 Let $x = (x_0, ..., x_(n-1))$ be an $n$-tuple of elements of $Zmod(p)$ where $p$ is prime. The NTT of $x$ is obtained by replacing the factors $e^(- i 2 pi / n)$ in the definition of the complex DFT by a _primitive $n$-th root of unity_ $omega in Zmod(p)$:
 
 #definition[`ntt` in `NTT.lean`][
-  The number-theoretic Transform (NTT) maps $x$ to another $n$-tuple $y = (y_0, ..., y_(n-1))$ of elements in  $Zmod(p)$ defined by
+  The number-theoretic transform (NTT) maps $x$ to another $n$-tuple $y = (y_0, ..., y_(n-1))$ of elements in  $Zmod(p)$ defined by
   $
     NTT(x)_k := sum_(j=0)^(n-1) x_j omega^(j k). 
   $
@@ -49,7 +49,7 @@ Let $x = (x_0, ..., x_(n-1))$ be an $n$-tuple of elements of $Zmod(p)$ where $p$
 Just like the DFT, the NTT is invertible:
 
 #definition[`intt` in `NTT.lean`][
-  The inverse number-theoretic Transform (INTT) maps $y = (y_0, ..., y_(n-1))$ back to the $n$-tuple
+  The inverse number-theoretic transform (INTT) maps $y = (y_0, ..., y_(n-1))$ back to the $n$-tuple
   $
     NTT(y)_k := n^(-1) sum_(j=0)^(n-1) y_j omega^(-j k).
   $
